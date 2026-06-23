@@ -196,7 +196,7 @@
                 
                 <!-- 商家列表 -->
                 <h2>入駐商家</h2>
-                <div class="products-grid" id="merchantsGrid">
+                <div id="merchantGrid">
                     <!-- 動態加載 -->
                 </div>
             </div>
@@ -206,13 +206,12 @@
         <div id="merchantDetailPage" style="display: none;">
             <div class="container">
                 <div class="merchant-detail">
-                    <div id="merchantDetailInfo">
-                        <!-- 動態加載 -->
-                    </div>
+                    <h2 id="merchantDetailName"></h2>
+                    <p id="merchantDetailDesc"></p>
                 </div>
                 
                 <h2>商家商品</h2>
-                <div class="products-grid" id="merchantProductsGrid">
+                <div id="merchantProducts">
                     <!-- 動態加載 -->
                 </div>
             </div>
@@ -253,24 +252,20 @@
         <div class="modal-content">
             <span class="modal-close" onclick="closeModal('merchantModal')">&times;</span>
             <h2>🏪 商家註冊</h2>
-            <form id="merchantForm">
+            <form id="merchantForm" onsubmit="submitMerchantRegister()">
                 <div class="form-group">
-                    <label>店鋪名稱 *</label>
-                    <input type="text" id="storeName" required>
+                    <label>商家名稱 *</label>
+                    <input type="text" id="merchantName" required>
                 </div>
                 <div class="form-group">
-                    <label>店鋪簡介 *</label>
-                    <textarea id="storeDescription" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>店鋪 Logo URL</label>
-                    <input type="url" id="storeLogo" placeholder="https://...">
+                    <label>商家簡介</label>
+                    <textarea id="merchantDescription" placeholder="介紹您的店鋪..."></textarea>
                 </div>
                 <div class="form-group">
                     <label>保證金：20 ARK</label>
                     <p class="form-help">請向合約地址發送 20 ARK 作為保證金</p>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full">提交註冊</button>
+                <button type="submit" class="btn btn-primary btn-full">提交入駐申請</button>
             </form>
         </div>
     </div>

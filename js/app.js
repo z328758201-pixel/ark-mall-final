@@ -36,8 +36,6 @@ let currentPage = 'home';
 document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
     loadMerchants();
-    updateExchangeRates();
-    loadCategories();
     loadCart();
 });
 
@@ -91,29 +89,13 @@ async function connectWallet() {
     }
 }
 
-// ============ 匯率更新 ============
-async function updateExchangeRates() {
-    try {
-        const result = await apiRequest('/rates');
-        if (result.success) {
-            exchangeRates = result.data;
-            
-            document.getElementById('arkRate').textContent = '$' + exchangeRates.ark.toFixed(2);
-            document.getElementById('bnbRate').textContent = '$' + exchangeRates.bnb.toFixed(2);
-            document.getElementById('usdtRate').textContent = '$' + exchangeRates.usdt.toFixed(2);
-            document.getElementById('usdCnyRate').textContent = '¥' + exchangeRates.usdCny.toFixed(2);
-        }
-    } catch (error) {
-        console.error('更新匯率失敗:', error);
-    }
-}
-
 // ============ 加載商品 ============
 async function loadProducts() {
     try {
         const result = await apiRequest('/products');
-        if (result.success) {
-            products = result.data;
+        // 後端直接返回數組，不是 { success: true, data: [...] }
+        if (Array.isArray(result)) {
+            products = result;
             renderProducts(products);
         }
     } catch (error) {
@@ -128,14 +110,12 @@ function renderProducts(productsToRender) {
     
     container.innerHTML = productsToRender.map(product => `
         <div class="product-card" onclick="showProductDetail(${product.id})">
-            <img src="${product.image || 'https://picsum.photos/400/300?random=' + product.id}" alt="${product.name}">
+            <img src="${product.image_url || 'https://picsum.photos/400/300?random=' + product.id}" alt="${product.name}">
             <div class="product-info">
                 <h3>${product.name}</h3>
-                <p class="product-price">${product.price} BNB ≈ ¥${product.price_cny}</p>
+                <p class="product-price">${product.price} BNB</p>
                 <p class="product-category">${product.category}</p>
-                <div class="product-rating">
-                    ${'★'.repeat(5)} (${product.rating_count || 0})
-                </div>
+                <p class="product-stock">庫存：${product.stock}</p>
             </div>
         </div>
     `).join('');
@@ -145,8 +125,9 @@ function renderProducts(productsToRender) {
 async function loadMerchants() {
     try {
         const result = await apiRequest('/merchants');
-        if (result.success) {
-            merchants = result.data;
+        // 後端返回數組
+        if (Array.isArray(result)) {
+            merchants = result;
             renderMerchants(merchants);
         }
     } catch (error) {
@@ -159,37 +140,19 @@ function renderMerchants(merchantsToRender) {
     const container = document.getElementById('merchantGrid');
     if (!container) return;
     
+    if (merchantsToRender.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">暫無入駐商家</p>';
+        return;
+    }
+    
     container.innerHTML = merchantsToRender.map(merchant => `
         <div class="merchant-card" onclick="showMerchantDetail(${merchant.id})">
-            <img src="${merchant.logo || 'https://picsum.photos/100/100?random=' + merchant.id}" alt="${merchant.name}">
+            <img src="https://picsum.photos/100/100?random=${merchant.id}" alt="${merchant.name}">
             <div class="merchant-info">
                 <h3>${merchant.name}</h3>
                 <p>${merchant.description || ''}</p>
             </div>
         </div>
-    `).join('');
-}
-
-// ============ 加載分類 ============
-async function loadCategories() {
-    try {
-        const result = await apiRequest('/categories');
-        if (result.success) {
-            categories = result.data;
-            renderCategories(categories);
-        }
-    } catch (error) {
-        console.error('加載分類失敗:', error);
-    }
-}
-
-// 渲染分類
-function renderCategories(categoriesToRender) {
-    const container = document.getElementById('categoryNav');
-    if (!container) return;
-    
-    container.innerHTML = categoriesToRender.map(category => `
-        <a class="category-tag" onclick="filterByCategory('${category}')">${category}</a>
     `).join('');
 }
 
@@ -248,16 +211,15 @@ function renderCart() {
     }
     
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const totalCny = total * exchangeRates.bnb;
     
     container.innerHTML = `
         <div class="cart-items">
             ${cart.map(item => `
                 <div class="cart-item">
-                    <img src="${item.image || 'https://picsum.photos/100/100?random=' + item.id}" alt="${item.name}">
+                    <img src="${item.image_url || 'https://picsum.photos/100/100?random=' + item.id}" alt="${item.name}">
                     <div class="cart-item-info">
                         <h3>${item.name}</h3>
-                        <p>${item.price} BNB ≈ ¥${item.price_cny}</p>
+                        <p>${item.price} BNB</p>
                         <div class="quantity-control">
                             <button onclick="updateQuantity(${item.id}, -1)">-</button>
                             <span>${item.quantity}</span>
@@ -269,7 +231,7 @@ function renderCart() {
             `).join('')}
         </div>
         <div class="cart-summary">
-            <p>總計：${total.toFixed(4)} BNB ≈ ¥${totalCny.toFixed(2)}</p>
+            <p>總計：${total.toFixed(4)} BNB</p>
             <button class="checkout-btn" onclick="checkout()">結算</button>
         </div>
     `;
@@ -311,11 +273,8 @@ async function checkout() {
         for (const item of cart) {
             await apiRequest('/orders', 'POST', {
                 user_address: currentAccount,
-                merchant_id: item.merchant_id,
                 product_id: item.id,
-                quantity: item.quantity,
-                total_price: item.price * item.quantity,
-                payment_token: 'BNB'
+                quantity: item.quantity
             });
         }
         
@@ -338,8 +297,9 @@ async function loadOrders() {
     
     try {
         const result = await apiRequest(`/orders?user_address=${currentAccount}`);
-        if (result.success) {
-            renderOrders(result.data);
+        // 後端返回數組
+        if (Array.isArray(result)) {
+            renderOrders(result);
         }
     } catch (error) {
         console.error('加載訂單失敗:', error);
@@ -365,11 +325,6 @@ function renderOrders(orders) {
                 <p>商品ID：${order.product_id}</p>
                 <p>數量：${order.quantity}</p>
                 <p>總計：${order.total_price} BNB</p>
-                ${order.shipping_no ? `<p>物流單號：${order.shipping_no}</p>` : ''}
-            </div>
-            <div class="order-actions">
-                ${order.status === 'shipped' ? `<button onclick="confirmReceive('${order.order_no}')">確認收貨</button>` : ''}
-                ${order.status === 'received' ? `<button onclick="reviewOrder('${order.order_no}', ${order.product_id})">評價</button>` : ''}
             </div>
         </div>
     `).join('');
@@ -382,141 +337,114 @@ function getStatusText(status) {
         'shipped': '已發貨',
         'received': '已簽收',
         'completed': '已完成',
-        'cancelled': '已取消',
-        'refunded': '已退款'
+        'cancelled': '已取消'
     };
     return statusMap[status] || status;
 }
 
-async function confirmReceive(orderNo) {
-    try {
-        await apiRequest(`/orders/${orderNo}/status`, 'PUT', { status: 'received' });
-        alert('已確認收貨！');
-        loadOrders();
-    } catch (error) {
-        console.error('確認收貨失敗:', error);
-    }
+// ============ 商家入駐功能 ============
+function showMerchantRegister() {
+    document.getElementById('merchantModal').style.display = 'block';
 }
 
-// ============ 評價功能 ============
-function reviewOrder(orderNo, productId) {
-    const rating = prompt('請輸入評分（1-5）：');
-    const comment = prompt('請輸入評價內容：');
-    
-    if (rating && comment) {
-        apiRequest('/reviews', 'POST', {
-            order_id: orderNo,
-            user_address: currentAccount,
-            product_id: productId,
-            rating: parseInt(rating),
-            comment: comment
-        }).then(result => {
-            if (result.success) {
-                alert('評價提交成功！');
-            } else {
-                alert('評價提交失敗：' + result.message);
-            }
-        });
-    }
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
 }
 
-// ============ 用戶地址功能 ============
-async function loadUserAddresses() {
-    if (!currentAccount) return;
-    
-    try {
-        const result = await apiRequest(`/addresses/${currentAccount}`);
-        if (result.success) {
-            renderUserAddresses(result.data);
-        }
-    } catch (error) {
-        console.error('加載地址失敗:', error);
-    }
-}
-
-function renderUserAddresses(addresses) {
-    const container = document.getElementById('addressesContent');
-    if (!container) return;
-    
-    if (addresses.length === 0) {
-        container.innerHTML = '<p class="empty-addresses">暫無收貨地址</p>';
+async function submitMerchantRegister() {
+    if (!currentAccount) {
+        alert('請先連接錢包！');
         return;
     }
     
-    container.innerHTML = addresses.map(addr => `
-        <div class="address-card">
-            <p><strong>${addr.name}</strong> ${addr.phone}</p>
-            <p>${addr.address}</p>
-            ${addr.is_default ? '<span class="default-tag">默認</span>' : ''}
-            <div class="address-actions">
-                <button onclick="editAddress(${addr.id})">編輯</button>
-                <button onclick="deleteAddress(${addr.id})">刪除</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function addAddress() {
-    const name = prompt('請輸入收貨人姓名：');
-    const phone = prompt('請輸入手機號碼：');
-    const address = prompt('請輸入收貨地址：');
+    const name = document.getElementById('merchantName').value.trim();
+    const description = document.getElementById('merchantDescription').value.trim();
     
-    if (name && phone && address) {
-        apiRequest('/addresses', 'POST', {
-            user_address: currentAccount,
+    if (!name) {
+        alert('請輸入商家名稱！');
+        return;
+    }
+    
+    try {
+        const result = await apiRequest('/merchants', 'POST', {
             name: name,
-            phone: phone,
-            address: address,
-            is_default: 0
-        }).then(result => {
-            if (result.success) {
-                alert('地址添加成功！');
-                loadUserAddresses();
-            } else {
-                alert('地址添加失敗：' + result.message);
-            }
+            address: currentAccount,
+            description: description
         });
+        
+        if (result.error) {
+            alert('入駐失敗：' + result.error);
+        } else {
+            alert('商家入駐成功！');
+            loadMerchants();
+            closeModal('merchantModal');
+            showPage('merchants');
+        }
+    } catch (error) {
+        console.error('商家入駐失敗:', error);
+        alert('入駐失敗：' + error.message);
     }
 }
 
-// ============ 商家功能 ============
+// ============ 商家詳情 ============
 function showMerchantDetail(merchantId) {
     showPage('merchantDetail');
     
     const merchant = merchants.find(m => m.id === merchantId);
     if (merchant) {
-        document.getElementById('merchantName').textContent = merchant.name;
-        document.getElementById('merchantDescription').textContent = merchant.description || '';
+        document.getElementById('merchantDetailName').textContent = merchant.name;
+        document.getElementById('merchantDetailDesc').textContent = merchant.description || '暫無描述';
         
         // 加載商家商品
         const merchantProducts = products.filter(p => p.merchant_id === merchantId);
-        renderProducts(merchantProducts);
+        renderMerchantProducts(merchantProducts);
     }
 }
 
-// ============ 搜索功能 ============
-async function search() {
-    const keyword = document.getElementById('searchInput').value.trim();
-    if (!keyword) return;
+function renderMerchantProducts(productsToRender) {
+    const container = document.getElementById('merchantProducts');
+    if (!container) return;
     
-    try {
-        const result = await apiRequest(`/search?keyword=${encodeURIComponent(keyword)}`);
-        if (result.success) {
-            products = result.products;
-            merchants = result.merchants;
-            
-            renderProducts(products);
-            renderMerchants(merchants);
-        }
-    } catch (error) {
-        console.error('搜索失敗:', error);
+    if (productsToRender.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">暫無商品</p>';
+        return;
+    }
+    
+    container.innerHTML = productsToRender.map(product => `
+        <div class="product-card" onclick="showProductDetail(${product.id})">
+            <img src="${product.image_url || 'https://picsum.photos/400/300?random=' + product.id}" alt="${product.name}">
+            <div class="product-info">
+                <h3>${product.name}</h3>
+                <p class="product-price">${product.price} BNB</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ============ 商品詳情 ============
+function showProductDetail(productId) {
+    showPage('productDetail');
+    
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        document.getElementById('detailName').textContent = product.name;
+        document.getElementById('detailPrice').textContent = product.price + ' BNB';
+        document.getElementById('detailDesc').textContent = product.description || '暫無描述';
+        document.getElementById('detailStock').textContent = '庫存：' + product.stock;
+        document.getElementById('detailCategory').textContent = product.category || '';
+        
+        const img = document.getElementById('detailImage');
+        img.src = product.image_url || 'https://picsum.photos/400/300?random=' + product.id;
+        
+        // 存儲當前商品 ID
+        document.getElementById('addToCartBtn').setAttribute('data-product-id', product.id);
     }
 }
 
-// ============ 分類篩選 ============
-function filterByCategory(category) {
-    const filteredProducts = products.filter(p => p.category === category);
-    renderProducts(filteredProducts);
+function addCurrentToCart() {
+    const btn = document.getElementById('addToCartBtn');
+    const productId = parseInt(btn.getAttribute('data-product-id'));
+    addToCart(productId);
 }
 
 // ============ 頁面導航 ============
@@ -534,24 +462,57 @@ function showPage(page) {
     
     // 更新導航欄
     document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-    document.querySelector(`.nav-link[onclick="showPage('${page}')"]`)?.classList.add('active');
+    const activeLink = document.querySelector(`.nav-link[onclick="showPage('${page}')"]`);
+    if (activeLink) activeLink.classList.add('active');
     
     // 加載頁面數據
     switch (page) {
         case 'orders':
             loadOrders();
             break;
-        case 'addresses':
-            loadUserAddresses();
-            break;
     }
 }
 
 // ============ 工具函數 ============
 function formatPrice(price) {
-    return price.toFixed(4);
+    return parseFloat(price).toFixed(4);
 }
 
 function formatDate(dateString) {
     return new Date(dateString).toLocaleString('zh-CN');
+}
+
+// ============ 全局函數 ============
+window.connectWallet = connectWallet;
+window.showPage = showPage;
+window.showCart = showCart;
+window.addToCart = addToCart;
+window.updateQuantity = updateQuantity;
+window.removeFromCart = removeFromCart;
+window.checkout = checkout;
+window.showMerchantRegister = showMerchantRegister;
+window.submitMerchantRegister = submitMerchantRegister;
+window.closeModal = closeModal;
+window.showMerchantDetail = showMerchantDetail;
+window.showProductDetail = showProductDetail;
+window.addCurrentToCart = addCurrentToCart;
+window.search = search;
+
+// 搜索功能
+async function search() {
+    const keyword = document.getElementById('searchInput').value.trim();
+    if (!keyword) {
+        loadProducts();
+        return;
+    }
+    
+    try {
+        const result = await apiRequest(`/search?keyword=${encodeURIComponent(keyword)}`);
+        if (result.products) {
+            products = result.products;
+            renderProducts(products);
+        }
+    } catch (error) {
+        console.error('搜索失敗:', error);
+    }
 }
