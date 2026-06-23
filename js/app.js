@@ -37,7 +37,81 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
     loadMerchants();
     loadCart();
+    loadExchangeRates(); // 載入匯率
 });
+
+// ============ 匯率功能 ============
+async function loadExchangeRates() {
+    try {
+        // 從 Binance 獲取 BNB/USDT 價格
+        const bnbResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT');
+        const bnbData = await bnbResponse.json();
+        exchangeRates.bnb = parseFloat(bnbData.price);
+        
+        // 從 Binance 獲取 ARK/USDT 價格（如果有）
+        try {
+            const arkResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ARKUSDT');
+            const arkData = await arkResponse.json();
+            exchangeRates.ark = parseFloat(arkData.price);
+        } catch (e) {
+            // 如果 Binance 沒有 ARK/USDT，使用默認值
+            exchangeRates.ark = 0.1; // 默認值
+        }
+        
+        console.log('匯率已更新:', exchangeRates);
+        
+        // 重新渲染商品以顯示最新價格
+        if (products.length > 0) {
+            renderProducts(products);
+        }
+    } catch (error) {
+        console.error('獲取匯率失敗:', error);
+        // 使用默認值
+        exchangeRates.bnb = 600; // 默認 BNB 價格
+    }
+}
+
+// 獲取多種代幣價格
+async function getAllTokenPrices() {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/ticker/price');
+        const data = await response.json();
+        
+        const prices = {};
+        data.forEach(item => {
+            if (item.symbol === 'BNBUSDT') prices.bnb = parseFloat(item.price);
+            if (item.symbol === 'ARKUSDT') prices.ark = parseFloat(item.price);
+            if (item.symbol === 'USDCUSDT') prices.usdc = parseFloat(item.price);
+            if (item.symbol === 'BUSDUSDT') prices.busd = parseFloat(item.price);
+        });
+        
+        return prices;
+    } catch (error) {
+        console.error('獲取代幣價格失敗:', error);
+        return {};
+    }
+}
+
+// 格式化多種代幣價格
+function formatAllPrices(bnbPrice) {
+    const prices = [];
+    
+    // BNB 價格
+    if (exchangeRates.bnb > 0) {
+        const usdValue = bnbPrice * exchangeRates.bnb;
+        prices.push(`${bnbPrice} BNB (≈$${usdValue.toFixed(2)})`);
+    } else {
+        prices.push(`${bnbPrice} BNB`);
+    }
+    
+    // ARK 價格
+    if (exchangeRates.ark > 0) {
+        const arkPrice = (bnbPrice * exchangeRates.bnb) / exchangeRates.ark;
+        prices.push(`≈${arkPrice.toFixed(2)} ARK`);
+    }
+    
+    return prices.join(' / ');
+}
 
 // ============ API 請求 ============
 async function apiRequest(endpoint, method = 'GET', data = null) {
@@ -113,7 +187,7 @@ function renderProducts(productsToRender) {
             <img src="${product.image_url || 'https://picsum.photos/400/300?random=' + product.id}" alt="${product.name}">
             <div class="product-info">
                 <h3>${product.name}</h3>
-                <p class="product-price">${product.price} BNB</p>
+                <p class="product-price">${formatAllPrices(product.price)}</p>
                 <p class="product-category">${product.category}</p>
                 <p class="product-stock">庫存：${product.stock}</p>
             </div>
@@ -415,7 +489,7 @@ function renderMerchantProducts(productsToRender) {
             <img src="${product.image_url || 'https://picsum.photos/400/300?random=' + product.id}" alt="${product.name}">
             <div class="product-info">
                 <h3>${product.name}</h3>
-                <p class="product-price">${product.price} BNB</p>
+                <p class="product-price">${formatAllPrices(product.price)}</p>
             </div>
         </div>
     `).join('');
@@ -428,7 +502,7 @@ function showProductDetail(productId) {
     const product = products.find(p => p.id === productId);
     if (product) {
         document.getElementById('detailName').textContent = product.name;
-        document.getElementById('detailPrice').textContent = product.price + ' BNB';
+        document.getElementById('detailPrice').textContent = formatAllPrices(product.price);
         document.getElementById('detailDesc').textContent = product.description || '暫無描述';
         document.getElementById('detailStock').textContent = '庫存：' + product.stock;
         document.getElementById('detailCategory').textContent = product.category || '';
@@ -452,7 +526,19 @@ function showPage(page) {
     currentPage = page;
     
     // 隱藏所有頁面
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    const allPages = [
+        'homePage',
+        'productPage',
+        'cartPage',
+        'ordersPage',
+        'merchantsPage',
+        'merchantDetailPage',
+        'merchantRegisterPage'
+    ];
+    allPages.forEach(pageId => {
+        const el = document.getElementById(pageId);
+        if (el) el.style.display = 'none';
+    });
     
     // 顯示對應頁面
     const pageElement = document.getElementById(page + 'Page');
