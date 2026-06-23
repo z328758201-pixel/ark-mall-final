@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK Mall - ARK 周邊產品專賣商城</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 導航欄 -->
+    <nav class="navbar">
+        <div class="container nav-content">
+            <div class="logo">
+                <i class="fas fa-store"></i>
+                <span>ARK Mall</span>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索商品或店鋪...">
+                <button onclick="search()">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            
+            <div class="nav-links">
+                <a class="nav-link" onclick="showPage('home')">首頁</a>
+                <a class="nav-link" onclick="showPage('merchants')">商家入駐</a>
+                <a class="nav-link" onclick="showPage('orders')">我的訂單</a>
+                <div class="cart-icon" onclick="showPage('cart')">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </div>
+                <div class="nav-link" onclick="connectWallet()">
+                    <i class="fas fa-wallet"></i>
+                    <span id="walletText">連接錢包</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <main class="main-content">
+        <!-- 首頁 -->
+        <div id="homePage">
+            <!-- Banner -->
+            <section class="banner">
+                <div class="container">
+                    <h1>🏪 ARK 周邊產品專賣商城</h1>
+                    <p>去中心化電商平台，支持 ARK、BNB、USDT 支付</p>
+                    <button class="btn btn-secondary" onclick="showPage('merchants')">
+                        入駐商家
+                    </button>
+                </div>
+            </section>
+            
+            <!-- 匯率顯示 -->
+            <section class="exchange-rate">
+                <div class="container">
+                    <div class="rate-item">
+                        <span class="rate-label">ARK/USD</span>
+                        <span class="rate-value" id="arkRate">$0.00</span>
+                    </div>
+                    <div class="rate-item">
+                        <span class="rate-label">BNB/USD</span>
+                        <span class="rate-value" id="bnbRate">$0.00</span>
+                    </div>
+                    <div class="rate-item">
+                        <span class="rate-label">USDT/USD</span>
+                        <span class="rate-value" id="usdtRate">$1.00</span>
+                    </div>
+                    <div class="rate-item">
+                        <span class="rate-label">USD/CNY</span>
+                        <span class="rate-value" id="usdCnyRate">¥7.20</span>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 抽水信息 -->
+            <section class="fee-info">
+                <div class="container">
+                    <i class="fas fa-info-circle"></i>
+                    平台交易佣金：<strong>5%</strong>（後續營收 50% 用於公開銷毀 ARK）
+                </div>
+            </section>
+            
+            <!-- 分類導航 -->
+            <section class="categories">
+                <div class="container">
+                    <h3>商品分類</h3>
+                    <div class="category-list" id="categoryList">
+                        <!-- 動態加載 -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 商品列表 -->
+            <section class="products">
+                <div class="container">
+                    <h2>熱門商品</h2>
+                    <div class="products-grid" id="productsGrid">
+                        <!-- 動態加載 -->
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- 商品詳情頁 -->
+        <div id="productPage" style="display: none;">
+            <div class="container">
+                <div class="product-detail">
+                    <div class="product-image">
+                        <img id="productDetailImage" src="" alt="">
+                    </div>
+                    <div class="product-info">
+                        <h1 id="productDetailName"></h1>
+                        <div class="product-price">
+                            <span id="productDetailPrice"></span>
+                            <span class="cny" id="productDetailCny"></span>
+                        </div>
+                        <div class="product-merchant" id="productDetailMerchant"></div>
+                        <div class="product-rating" id="productDetailRating"></div>
+                        <div class="product-stock" id="productDetailStock"></div>
+                        <div class="product-description" id="productDetailDescription"></div>
+                        
+                        <div class="form-group">
+                            <label>數量</label>
+                            <input type="number" id="quantityInput" value="1" min="1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>支付方式</label>
+                            <select id="paymentSelect">
+                                <option value="0">BNB</option>
+                                <option value="1">USDT</option>
+                                <option value="2">ARK</option>
+                            </select>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="addToCart()">加入購物車</button>
+                            <button class="btn btn-primary" onclick="buyNow()">立即購買</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 評價列表 -->
+                <div class="reviews-section">
+                    <h2>商品評價</h2>
+                    <div id="productReviews">
+                        <!-- 動態加載 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 購物車頁 -->
+        <div id="cartPage" style="display: none;">
+            <div class="container">
+                <div class="cart-container">
+                    <h1>🛒 購物車</h1>
+                    <div id="cartItems">
+                        <!-- 動態加載 -->
+                    </div>
+                    <div class="cart-total">
+                        <div class="total-label">總計：</div>
+                        <div class="total-value" id="cartTotal">0 BNB</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="checkout()">去結算</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 訂單頁 -->
+        <div id="ordersPage" style="display: none;">
+            <div class="container">
+                <div class="orders-container">
+                    <h1>📦 我的訂單</h1>
+                    <div id="orderList">
+                        <!-- 動態加載 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 商家入駐頁 -->
+        <div id="merchantsPage" style="display: none;">
+            <div class="container">
+                <div class="merchants-header">
+                    <h1>🏪 商家入駐</h1>
+                    <p>繳納 20 ARK 保證金，開啟您的專賣店鋪</p>
+                    <button class="btn btn-primary" onclick="showMerchantRegister()">立即入駐</button>
+                </div>
+                
+                <!-- 商家列表 -->
+                <h2>入駐商家</h2>
+                <div class="products-grid" id="merchantsGrid">
+                    <!-- 動態加載 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 商家詳情頁 -->
+        <div id="merchantDetailPage" style="display: none;">
+            <div class="container">
+                <div class="merchant-detail">
+                    <div id="merchantDetailInfo">
+                        <!-- 動態加載 -->
+                    </div>
+                </div>
+                
+                <h2>商家商品</h2>
+                <div class="products-grid" id="merchantProductsGrid">
+                    <!-- 動態加載 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 頁腳 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>關於我們</h3>
+                    <p>ARK 周邊產品專賣商城，去中心化電商平台</p>
+                    <p>支持 ARK、BNB、USDT 支付</p>
+                </div>
+                <div class="footer-section">
+                    <h3>快速鏈接</h3>
+                    <a href="#">首頁</a>
+                    <a href="#">商家入駐</a>
+                    <a href="#">我的訂單</a>
+                    <a href="#">幫助中心</a>
+                </div>
+                <div class="footer-section">
+                    <h3>聯繫我們</h3>
+                    <p><i class="fas fa-envelope"></i> support@arkmall.com</p>
+                    <p><i class="fas fa-globe"></i> www.arkmall.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024 ARK Mall. All rights reserved.</p>
+                <p>佣金地址：0x6b6278b766b7db9b347e0dabb4C8bf4F6f09B429</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 商家註冊模態框 -->
+    <div id="merchantModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('merchantModal')">&times;</span>
+            <h2>🏪 商家註冊</h2>
+            <form id="merchantForm">
+                <div class="form-group">
+                    <label>店鋪名稱 *</label>
+                    <input type="text" id="storeName" required>
+                </div>
+                <div class="form-group">
+                    <label>店鋪簡介 *</label>
+                    <textarea id="storeDescription" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>店鋪 Logo URL</label>
+                    <input type="url" id="storeLogo" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>保證金：20 ARK</label>
+                    <p class="form-help">請向合約地址發送 20 ARK 作為保證金</p>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">提交註冊</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

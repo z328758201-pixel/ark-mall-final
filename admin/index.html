@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理後台 - ARK Mall</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        /* 側邊欄 */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            position: fixed;
+            height: 100vh;
+            padding: 30px 20px;
+        }
+        
+        .sidebar-logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-menu a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        /* 主內容區 */
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+        }
+        
+        .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .wallet-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        /* 卡片 */
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .card-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        /* 統計卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+        
+        /* 表格 */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: bold;
+        }
+        
+        .table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* 按鈕 */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        /* 狀態標籤 */
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* 商家信息 */
+        .merchant-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .merchant-field {
+            margin-bottom: 15px;
+        }
+        
+        .merchant-field label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+        }
+        
+        .merchant-field value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        /* 模態框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: #16213e;
+            max-width: 800px;
+            margin: 50px auto;
+            border-radius: 15px;
+            padding: 30px;
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: white;
+        }
+        
+        /* 響應式 */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 側邊欄 -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fas fa-shield-alt"></i>
+            <span>管理後台</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#" class="active" onclick="showSection('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>控制面板</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('merchants')">
+                    <i class="fas fa-store"></i>
+                    <span>商家審核</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('products')">
+                    <i class="fas fa-box"></i>
+                    <span>商品管理</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('orders')">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>訂單管理</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>系統設置</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- 主內容區 -->
+    <main class="main-content">
+        <!-- 頭部 -->
+        <div class="header">
+            <h1 id="pageTitle">控制面板</h1>
+            <div class="wallet-info">
+                <div class="wallet-badge" id="walletAddress">未連接</div>
+                <button class="btn btn-primary" onclick="connectWallet()">連接管理員錢包</button>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div id="dashboardSection">
+            <!-- 統計卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div class="stat-value" id="totalMerchants">15</div>
+                    <div class="stat-label">商家總數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-value" id="pendingMerchants">3</div>
+                    <div class="stat-label">待審核商家</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    <div class="stat-value" id="totalProducts">256</div>
+                    <div class="stat-label">商品總數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-value" id="totalFees">12.5 BNB</div>
+                    <div class="stat-label">總佣金收入</div>
+                </div>
+            </div>
+
+            <!-- 待審核商家 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">待審核商家</div>
+                    <button class="btn btn-primary" onclick="showSection('merchants')">查看全部</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>商家地址</th>
+                            <th>店鋪名稱</th>
+                            <th>保證金</th>
+                            <th>申請時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingMerchantsTable">
+                        <tr>
+                            <td>0x1234...5678</td>
+                            <td>ARK 服飾店</td>
+                            <td>20 ARK</td>
+                            <td>2024-01-15 14:30</td>
+                            <td>
+                                <button class="btn btn-success" onclick="approveMerchant('0x1234...5678')">審核通過</button>
+                                <button class="btn btn-danger" onclick="rejectMerchant('0x1234...5678')">拒絕</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>0xabcd...efgh</td>
+                            <td>ARK 數碼店</td>
+                            <td>20 ARK</td>
+                            <td>2024-01-15 13:20</td>
+                            <td>
+                                <button class="btn btn-success" onclick="approveMerchant('0xabcd...efgh')">審核通過</button>
+                                <button class="btn btn-danger" onclick="rejectMerchant('0xabcd...efgh')">拒絕</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 商家審核 -->
+        <div id="merchantsSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">商家列表</div>
+                    <div>
+                        <select id="merchantStatusFilter" onchange="filterMerchants()">
+                            <option value="all">全部商家</option>
+                            <option value="pending">待審核</option>
+                            <option value="approved">已審核</option>
+                            <option value="rejected">已拒絕</option>
+                        </select>
+                    </div>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>商家地址</th>
+                            <th>店鋪名稱</th>
+                            <th>保證金</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="merchantsTable">
+                        <tr>
+                            <td>0x1234...5678</td>
+                            <td>ARK 服飾店</td>
+                            <td>20 ARK</td>
+                            <td><span class="status-badge status-pending">待審核</span></td>
+                            <td>
+                                <button class="btn btn-primary" onclick="viewMerchant('0x1234...5678')">查看詳情</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>0xabcd...efgh</td>
+                            <td>ARK 飾品店</td>
+                            <td>20 ARK</td>
+                            <td><span class="status-badge status-approved">已審核</span></td>
+                            <td>
+                                <button class="btn btn-primary" onclick="viewMerchant('0xabcd...efgh')">查看詳情</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 商品管理 -->
+        <div id="productsSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">商品列表</div>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>商品名稱</th>
+                            <th>商家</th>
+                            <th>價格</th>
+                            <th>庫存</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTable">
+                        <tr>
+                            <td>1</td>
+                            <td>ARK Logo T-Shirt</td>
+                            <td>0x1234...5678</td>
+                            <td>0.5 BNB</td>
+                            <td>100</td>
+                            <td><span class="status-badge status-approved">上架中</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 訂單管理 -->
+        <div id="ordersSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">訂單列表</div>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>訂單號</th>
+                            <th>買家</th>
+                            <th>商家</th>
+                            <th>商品</th>
+                            <th>金額</th>
+                            <th>佣金</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <tr>
+                            <td>#10001</td>
+                            <td>0x1234...5678</td>
+                            <td>0xabcd...efgh</td>
+                            <td>ARK Logo T-Shirt</td>
+                            <td>0.5 BNB</td>
+                            <td>0.025 BNB</td>
+                            <td><span class="status-badge status-approved">已完成</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 系統設置 -->
+        <div id="settingsSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">系統設置</div>
+                </div>
+                <div class="merchant-info">
+                    <div>
+                        <div class="merchant-field">
+                            <label>佣金地址</label>
+                            <value>0x6b6278b766b7db9b347e0dabb4C8bf4F6f09B429</value>
+                        </div>
+                        <div class="merchant-field">
+                            <label>佣金比例</label>
+                            <value>5%</value>
+                        </div>
+                        <div class="merchant-field">
+                            <label>商家保證金</label>
+                            <value>20 ARK</value>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="merchant-field">
+                            <label>ARK 代幣地址</label>
+                            <value>0xCae117ca6Bc8A341D2E7207F30E180f0e5618B9D</value>
+                        </div>
+                        <div class="merchant-field">
+                            <label>部署網絡</label>
+                            <value>BSC (Binance Smart Chain)</value>
+                        </div>
+                        <div class="merchant-field">
+                            <label>合約地址</label>
+                            <value>待部署</value>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 商家詳情模態框 -->
+    <div id="merchantDetailModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('merchantDetailModal')">&times;</span>
+            <h2 style="margin-bottom: 30px;">商家詳情</h2>
+            <div id="merchantDetailContent">
+                <!-- 動態加載 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
