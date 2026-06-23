@@ -515,4 +515,4 @@ async function search() {
     } catch (error) {
         console.error('搜索失敗:', error);
     }
-}
+}// Cache bust: Tue Jun 23 15:51:38 UTC 2026
