@@ -41,24 +41,53 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============ 匯率功能 ============
+// 代幣合約地址
+const TOKEN_CONTRACTS = {
+    BNB: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+    ARK: '0xCae117ca6Bc8A341D2E7207F30E180f0e5618B9D',
+    USDT: '0x55d398326f99059fF775485246999027B3197955'
+};
+
+// Dexscreener API (ARK/USDT)
+const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/pairs/bsc/0xcaaf3c41a40103a23eeaa4bba468af3cf5b0e0d8';
+
 async function loadExchangeRates() {
     try {
-        // 從 Binance 獲取 BNB/USDT 價格
+        // 1. 從 Binance 獲取 BNB/USDT 價格
         const bnbResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT');
         const bnbData = await bnbResponse.json();
         exchangeRates.bnb = parseFloat(bnbData.price);
         
-        // 從 Binance 獲取 ARK/USDT 價格（如果有）
+        // 2. 從 Dexscreener 獲取 ARK/USDT 價格（使用合約地址）
         try {
-            const arkResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ARKUSDT');
+            const arkResponse = await fetch(DEXSCREENER_API);
             const arkData = await arkResponse.json();
-            exchangeRates.ark = parseFloat(arkData.price);
+            if (arkData.pairs && arkData.pairs.length > 0) {
+                exchangeRates.ark = parseFloat(arkData.pairs[0].priceUsd);
+            }
         } catch (e) {
-            // 如果 Binance 沒有 ARK/USDT，使用默認值
-            exchangeRates.ark = 0.1; // 默認值
+            console.error('獲取 ARK 價格失敗:', e);
+            exchangeRates.ark = 7.80; // 默認值
         }
         
-        console.log('匯率已更新:', exchangeRates);
+        // 3. 從 Binance 獲取 USDT/CNY 匯率（或使用默認值）
+        try {
+            // 嘗試從 Binance 獲取
+            const cnyResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCNY');
+            const cnyData = await cnyResponse.json();
+            if (cnyData.price) {
+                exchangeRates.usdCny = parseFloat(cnyData.price);
+            }
+        } catch (e) {
+            // 使用默認值
+            exchangeRates.usdCny = 7.20;
+        }
+        
+        console.log('=== 匯率已更新 ===');
+        console.log('BNB/USDT:', exchangeRates.bnb);
+        console.log('ARK/USDT:', exchangeRates.ark);
+        console.log('USDT/CNY:', exchangeRates.usdCny);
+        console.log('代幣合約:', TOKEN_CONTRACTS);
         
         // 重新渲染商品以顯示最新價格
         if (products.length > 0) {
@@ -67,28 +96,9 @@ async function loadExchangeRates() {
     } catch (error) {
         console.error('獲取匯率失敗:', error);
         // 使用默認值
-        exchangeRates.bnb = 600; // 默認 BNB 價格
-    }
-}
-
-// 獲取多種代幣價格
-async function getAllTokenPrices() {
-    try {
-        const response = await fetch('https://api.binance.com/api/v3/ticker/price');
-        const data = await response.json();
-        
-        const prices = {};
-        data.forEach(item => {
-            if (item.symbol === 'BNBUSDT') prices.bnb = parseFloat(item.price);
-            if (item.symbol === 'ARKUSDT') prices.ark = parseFloat(item.price);
-            if (item.symbol === 'USDCUSDT') prices.usdc = parseFloat(item.price);
-            if (item.symbol === 'BUSDUSDT') prices.busd = parseFloat(item.price);
-        });
-        
-        return prices;
-    } catch (error) {
-        console.error('獲取代幣價格失敗:', error);
-        return {};
+        exchangeRates.bnb = 575;
+        exchangeRates.ark = 7.80;
+        exchangeRates.usdCny = 7.20;
     }
 }
 
@@ -96,15 +106,18 @@ async function getAllTokenPrices() {
 function formatAllPrices(bnbPrice) {
     const prices = [];
     
-    // BNB 價格
+    // 1. BNB 價格 + USD + CNY
     if (exchangeRates.bnb > 0) {
         const usdValue = bnbPrice * exchangeRates.bnb;
-        prices.push(`${bnbPrice} BNB (≈$${usdValue.toFixed(2)})`);
+        const cnyValue = usdValue * exchangeRates.usdCny;
+        prices.push(`${bnbPrice} BNB`);
+        prices.push(`≈$${usdValue.toFixed(2)}`);
+        prices.push(`≈¥${cnyValue.toFixed(2)}`);
     } else {
         prices.push(`${bnbPrice} BNB`);
     }
     
-    // ARK 價格
+    // 2. ARK 價格（根據合約 0xCae117ca6Bc8A341D2E7207F30E180f0e5618B9D）
     if (exchangeRates.ark > 0) {
         const arkPrice = (bnbPrice * exchangeRates.bnb) / exchangeRates.ark;
         prices.push(`≈${arkPrice.toFixed(2)} ARK`);
