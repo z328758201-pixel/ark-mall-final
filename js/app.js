@@ -103,10 +103,6 @@ async function loadExchangeRates() {
         exchangeRates.usdCny = 6.79;
     }
 }
-        exchangeRates.ark = 7.80;
-        exchangeRates.usdCny = 7.20;
-    }
-}
 
 // 格式化多種代幣價格
 function formatAllPrices(bnbPrice) {
