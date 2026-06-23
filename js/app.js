@@ -104,25 +104,29 @@ async function loadExchangeRates() {
     }
 }
 
-// 格式化多種代幣價格
-function formatAllPrices(bnbPrice) {
+// 格式化多種代幣價格（接受 USD 價格）
+function formatAllPrices(usdPrice) {
     const prices = [];
     
-    // 1. BNB 價格 + USD + CNY
-    if (exchangeRates.bnb > 0) {
-        const usdValue = bnbPrice * exchangeRates.bnb;
-        const cnyValue = usdValue * exchangeRates.usdCny;
-        prices.push(`${bnbPrice} BNB`);
-        prices.push(`≈$${usdValue.toFixed(2)}`);
-        prices.push(`≈¥${cnyValue.toFixed(2)}`);
-    } else {
-        prices.push(`${bnbPrice} BNB`);
+    // 1. USD 價格
+    prices.push(`$${usdPrice.toFixed(2)}`);
+    
+    // 2. CNY 價格
+    if (exchangeRates.usdCny > 0) {
+        const cnyValue = usdPrice * exchangeRates.usdCny;
+        prices.push(`¥${cnyValue.toFixed(2)}`);
     }
     
-    // 2. ARK 價格（根據合約 0xCae117ca6Bc8A341D2E7207F30E180f0e5618B9D）
+    // 3. BNB 價格
+    if (exchangeRates.bnb > 0) {
+        const bnbValue = usdPrice / exchangeRates.bnb;
+        prices.push(`${bnbValue.toFixed(6)} BNB`);
+    }
+    
+    // 4. ARK 價格
     if (exchangeRates.ark > 0) {
-        const arkPrice = (bnbPrice * exchangeRates.bnb) / exchangeRates.ark;
-        prices.push(`≈${arkPrice.toFixed(2)} ARK`);
+        const arkValue = usdPrice / exchangeRates.ark;
+        prices.push(`${arkValue.toFixed(2)} ARK`);
     }
     
     return prices.join(' / ');
