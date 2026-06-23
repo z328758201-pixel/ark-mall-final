@@ -93,7 +93,7 @@ async function connectWallet() {
 async function loadProducts() {
     try {
         const result = await apiRequest('/products');
-        // 後端直接返回數組，不是 { success: true, data: [...] }
+        // 後端返回數組（沒有 success 字段）
         if (Array.isArray(result)) {
             products = result;
             renderProducts(products);
@@ -125,9 +125,9 @@ function renderProducts(productsToRender) {
 async function loadMerchants() {
     try {
         const result = await apiRequest('/merchants');
-        // 後端返回數組
-        if (Array.isArray(result)) {
-            merchants = result;
+        // 後端返回 { success: true, data: [...] }
+        if (result.success && Array.isArray(result.data)) {
+            merchants = result.data;
             renderMerchants(merchants);
         }
     } catch (error) {
