@@ -1,285 +1,403 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARK Mall - ARK 周邊產品專賣商城</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ARK Mall</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#333}
+.header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;text-align:center}
+.header h1{font-size:24px;margin-bottom:5px}
+.header p{font-size:14px;opacity:0.9}
+.price-bar{background:#1a1a2e;color:#fff;padding:12px 20px;text-align:center;font-size:14px}
+.price-bar span{margin:0 10px}
+.price-bar .label{opacity:0.7}
+.price-bar .value{color:#00d4aa;font-weight:bold}
+.nav{display:flex;background:#fff;border-bottom:1px solid #eee;overflow-x:auto}
+.nav button{flex:1;padding:12px 8px;border:none;background:none;font-size:14px;cursor:pointer;white-space:nowrap;color:#666}
+.nav button.active{color:#667eea;border-bottom:2px solid #667eea;font-weight:bold}
+.container{max-width:800px;margin:0 auto;padding:15px}
+.page{display:none}
+.page.active{display:block}
+.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.product-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);cursor:pointer}
+.product-card img{width:100%;height:150px;object-fit:cover}
+.product-card .info{padding:12px}
+.product-card .name{font-size:14px;font-weight:bold;margin-bottom:6px}
+.product-card .price{color:#e74c3c;font-size:13px;line-height:1.5}
+.product-card .merchant{color:#999;font-size:11px;margin-top:4px}
+.detail{background:#fff;border-radius:12px;padding:20px;margin-bottom:15px}
+.detail img{width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:15px}
+.detail h2{font-size:20px;margin-bottom:10px}
+.detail .price{color:#e74c3c;font-size:16px;line-height:1.8;margin-bottom:10px}
+.detail .desc{color:#666;font-size:14px;line-height:1.6;margin-bottom:15px}
+.detail .meta{display:flex;gap:15px;color:#999;font-size:12px;margin-bottom:15px}
+.merchant-info{background:#f8f9fa;border-radius:8px;padding:15px;margin-top:15px}
+.merchant-info h4{margin-bottom:8px;color:#667eea}
+.merchant-info p{font-size:13px;color:#666;margin-bottom:4px}
+.merchant-info .tp{font-family:monospace;font-size:12px;word-break:break-all;background:#e8e8e8;padding:6px;border-radius:4px}
+.merchant-info img{max-width:200px;margin-top:10px;border-radius:8px}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;text-align:center}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-back{background:#f0f0f0;color:#666;margin-bottom:15px}
+.form-group{margin-bottom:15px}
+.form-group label{display:block;font-size:14px;font-weight:bold;margin-bottom:6px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px}
+.form-group textarea{height:80px;resize:vertical}
+.merchant-card{background:#fff;border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.merchant-card h3{font-size:16px;margin-bottom:6px}
+.merchant-card p{font-size:13px;color:#666;margin-bottom:4px}
+.merchant-card .tp{font-family:monospace;font-size:11px;color:#999;word-break:break-all}
+.merchant-card img{max-width:100px;margin-top:8px;border-radius:6px}
+.cart-item{background:#fff;border-radius:12px;padding:15px;margin-bottom:12px;display:flex;gap:12px;align-items:center}
+.cart-item img{width:80px;height:60px;object-fit:cover;border-radius:8px}
+.cart-item .info{flex:1}
+.cart-item .name{font-weight:bold;font-size:14px}
+.cart-item .price{color:#e74c3c;font-size:13px}
+.cart-item .qty{display:flex;align-items:center;gap:10px;margin-top:6px}
+.cart-item .qty button{width:28px;height:28px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:16px;cursor:pointer}
+.empty{text-align:center;padding:40px;color:#999}
+.success{text-align:center;padding:40px}
+.success h2{color:#27ae60;margin-bottom:10px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999;display:none}
+@media(max-width:480px){.products-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-    <!-- 導航欄 -->
-    <nav class="navbar">
-        <div class="container nav-content">
-            <div class="logo">
-                <i class="fas fa-store"></i>
-                <span>ARK Mall</span>
-            </div>
-            
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="搜索商品或店鋪...">
-                <button onclick="search()">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
-            
-            <div class="nav-links">
-                <a class="nav-link" onclick="showPage('home')">首頁</a>
-                <a class="nav-link" onclick="showPage('merchants')">商家入駐</a>
-                <a class="nav-link" onclick="showPage('orders')">我的訂單</a>
-                <div class="cart-icon" onclick="showPage('cart')">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-badge" id="cartBadge">0</span>
-                </div>
-                <div class="nav-link" onclick="connectWallet()">
-                    <i class="fas fa-wallet"></i>
-                    <span id="walletText">連接錢包</span>
-                </div>
-            </div>
-        </div>
-    </nav>
 
-    <!-- 主要內容 -->
-    <main class="main-content">
-        <!-- 首頁 -->
-        <div id="homePage">
-            <!-- Banner -->
-            <section class="banner">
-                <div class="container">
-                    <h1>🏪 ARK 周邊產品專賣商城</h1>
-                    <p>去中心化電商平台，支持 ARK、BNB、USDT 支付</p>
-                    <button class="btn btn-secondary" onclick="showPage('merchants')">
-                        入駐商家
-                    </button>
-                </div>
-            </section>
-            
-            <!-- 匯率顯示 -->
-            <section class="exchange-rate">
-                <div class="container">
-                    <div class="rate-item">
-                        <span class="rate-label">ARK/USD</span>
-                        <span class="rate-value" id="arkRate">$0.00</span>
-                    </div>
-                    <div class="rate-item">
-                        <span class="rate-label">BNB/USD</span>
-                        <span class="rate-value" id="bnbRate">$0.00</span>
-                    </div>
-                    <div class="rate-item">
-                        <span class="rate-label">USDT/USD</span>
-                        <span class="rate-value" id="usdtRate">$1.00</span>
-                    </div>
-                    <div class="rate-item">
-                        <span class="rate-label">USD/CNY</span>
-                        <span class="rate-value" id="usdCnyRate">¥7.20</span>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- 抽水信息 -->
-            <section class="fee-info">
-                <div class="container">
-                    <i class="fas fa-info-circle"></i>
-                    平台交易佣金：<strong>5%</strong>（後續營收 50% 用於公開銷毀 ARK）
-                </div>
-            </section>
-            
-            <!-- 分類導航 -->
-            <section class="categories">
-                <div class="container">
-                    <h3>商品分類</h3>
-                    <div class="category-list" id="categoryList">
-                        <!-- 動態加載 -->
-                    </div>
-                </div>
-            </section>
-            
-            <!-- 商品列表 -->
-            <section class="products">
-                <div class="container">
-                    <h2>熱門商品</h2>
-                    <div class="products-grid" id="productsGrid">
-                        <!-- 動態加載 -->
-                    </div>
-                </div>
-            </section>
-        </div>
-        
-        <!-- 商品詳情頁 -->
-        <div id="productPage" style="display: none;">
-            <div class="container">
-                <div class="product-detail">
-                    <div class="product-image">
-                        <img id="productDetailImage" src="" alt="">
-                    </div>
-                    <div class="product-info">
-                        <h1 id="productDetailName"></h1>
-                        <div class="product-price">
-                            <span id="productDetailPrice"></span>
-                            <span class="cny" id="productDetailCny"></span>
-                        </div>
-                        <div class="product-merchant" id="productDetailMerchant"></div>
-                        <div class="product-rating" id="productDetailRating"></div>
-                        <div class="product-stock" id="productDetailStock"></div>
-                        <div class="product-description" id="productDetailDescription"></div>
-                        
-                        <div class="form-group">
-                            <label>數量</label>
-                            <input type="number" id="quantityInput" value="1" min="1">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>支付方式</label>
-                            <select id="paymentSelect">
-                                <option value="0">BNB</option>
-                                <option value="1">USDT</option>
-                                <option value="2">ARK</option>
-                            </select>
-                        </div>
-                        
-                        <div class="action-buttons">
-                            <button class="btn btn-primary" onclick="addToCart()">加入購物車</button>
-                            <button class="btn btn-primary" onclick="buyNow()">立即購買</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 評價列表 -->
-                <div class="reviews-section">
-                    <h2>商品評價</h2>
-                    <div id="productReviews">
-                        <!-- 動態加載 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 購物車頁 -->
-        <div id="cartPage" style="display: none;">
-            <div class="container">
-                <div class="cart-container">
-                    <h1>🛒 購物車</h1>
-                    <div id="cartItems">
-                        <!-- 動態加載 -->
-                    </div>
-                    <div class="cart-total">
-                        <div class="total-label">總計：</div>
-                        <div class="total-value" id="cartTotal">0 BNB</div>
-                    </div>
-                    <button class="btn btn-primary" onclick="checkout()">去結算</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 訂單頁 -->
-        <div id="ordersPage" style="display: none;">
-            <div class="container">
-                <div class="orders-container">
-                    <h1>📦 我的訂單</h1>
-                    <div id="orderList">
-                        <!-- 動態加載 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 商家入駐頁 -->
-        <div id="merchantsPage" style="display: none;">
-            <div class="container">
-                <div class="merchants-header">
-                    <h1>🏪 商家入駐</h1>
-                    <p>繳納 20 ARK 保證金，開啟您的專賣店鋪</p>
-                    <button class="btn btn-primary" onclick="showMerchantRegister()">立即入駐</button>
-                </div>
-                
-                <!-- 商家列表 -->
-                <h2>入駐商家</h2>
-                <div id="merchantGrid">
-                    <!-- 動態加載 -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- 商家詳情頁 -->
-        <div id="merchantDetailPage" style="display: none;">
-            <div class="container">
-                <div class="merchant-detail">
-                    <h2 id="merchantDetailName"></h2>
-                    <p id="merchantDetailDesc"></p>
-                </div>
-                
-                <h2>商家商品</h2>
-                <div id="merchantProducts">
-                    <!-- 動態加載 -->
-                </div>
-            </div>
-        </div>
-    </main>
+<div class="header">
+  <h1>ARK Mall</h1>
+  <p>使用 ARK / BNB 購買全球商品</p>
+</div>
 
-    <!-- 頁腳 -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>關於我們</h3>
-                    <p>ARK 周邊產品專賣商城，去中心化電商平台</p>
-                    <p>支持 ARK、BNB、USDT 支付</p>
-                </div>
-                <div class="footer-section">
-                    <h3>快速鏈接</h3>
-                    <a href="#">首頁</a>
-                    <a href="#">商家入駐</a>
-                    <a href="#">我的訂單</a>
-                    <a href="#">幫助中心</a>
-                </div>
-                <div class="footer-section">
-                    <h3>聯繫我們</h3>
-                    <p><i class="fas fa-envelope"></i> support@arkmall.com</p>
-                    <p><i class="fas fa-globe"></i> www.arkmall.com</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>© 2024 ARK Mall. All rights reserved.</p>
-                <p>佣金地址：0x6b6278b766b7db9b347e0dabb4C8bf4F6f09B429</p>
-            </div>
-        </div>
-    </footer>
+<div class="price-bar" id="priceBar">
+  <span><span class="label">BNB:</span> <span class="value" id="priceBNB">載入中...</span></span>
+  <span><span class="label">ARK:</span> <span class="value" id="priceARK">載入中...</span></span>
+  <span><span class="label">匯率:</span> <span class="value" id="priceCNY">載入中...</span></span>
+</div>
 
-    <!-- 商家註冊模態框 -->
-    <div id="merchantModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal('merchantModal')">&times;</span>
-            <h2>🏪 商家入駐</h2>
-            <form id="merchantForm" onsubmit="submitMerchantRegister()">
-                <div class="form-group">
-                    <label>商家名稱 *</label>
-                    <input type="text" id="merchantName" required placeholder="輸入商家名稱">
-                </div>
-                <div class="form-group">
-                    <label>商家簡介</label>
-                    <textarea id="merchantDescription" placeholder="介紹您的店鋪..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>TP 錢包收款地址 *</label>
-                    <input type="text" id="merchantTpAddress" required placeholder="0x...">
-                    <p class="form-help">輸入您的 TP 錢包 BSC 網絡收款地址</p>
-                </div>
-                <div class="form-group">
-                    <label>收款二維碼</label>
-                    <input type="file" id="merchantQrcode" accept="image/*">
-                    <p class="form-help">上傳您的收款二維碼圖片</p>
-                </div>
-                <div class="form-group">
-                    <label>保證金：20 ARK</label>
-                    <p class="form-help">請向合約地址發送 20 ARK 作為保證金</p>
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">提交入駐申請</button>
-            </form>
-        </div>
+<div class="nav" id="navBar">
+  <button class="active" onclick="showPage('home')">商品</button>
+  <button onclick="showPage('merchants')">商家</button>
+  <button onclick="showPage('cart')">購物車</button>
+  <button onclick="showPage('join')">入駐</button>
+</div>
+
+<div class="container">
+  <!-- 首頁 -->
+  <div class="page active" id="page-home">
+    <div class="products-grid" id="productsGrid"></div>
+  </div>
+
+  <!-- 商品詳情 -->
+  <div class="page" id="page-detail">
+    <button class="btn btn-back" onclick="showPage('home')">← 返回</button>
+    <div id="detailContent"></div>
+  </div>
+
+  <!-- 商家列表 -->
+  <div class="page" id="page-merchants">
+    <div id="merchantsList"></div>
+  </div>
+
+  <!-- 購物車 -->
+  <div class="page" id="page-cart">
+    <div id="cartContent"></div>
+  </div>
+
+  <!-- 商家入駐 -->
+  <div class="page" id="page-join">
+    <div style="background:#fff;border-radius:12px;padding:20px">
+      <h2 style="margin-bottom:15px">商家入駐</h2>
+      <div class="form-group">
+        <label>商家名稱 *</label>
+        <input type="text" id="joinName" placeholder="請輸入商家名稱">
+      </div>
+      <div class="form-group">
+        <label>商家介紹</label>
+        <textarea id="joinDesc" placeholder="請輸入商家介紹"></textarea>
+      </div>
+      <div class="form-group">
+        <label>TP 錢包收款地址 *</label>
+        <input type="text" id="joinTP" placeholder="0x...">
+      </div>
+      <div class="form-group">
+        <label>收款二維碼</label>
+        <input type="file" id="joinQR" accept="image/*">
+        <div id="joinQRPreview" style="margin-top:8px"></div>
+      </div>
+      <button class="btn btn-primary" onclick="submitJoin()">提交入駐申請</button>
     </div>
+  </div>
+</div>
 
-    <script src="js/app.js"></script>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ Config ============
+const API = window.location.origin + '/api';
+
+// ============ State ============
+let allProducts = [];
+let allMerchants = [];
+let cart = JSON.parse(localStorage.getItem('ark_cart') || '[]');
+let prices = { bnb: 580, ark: 7.80, usdCny: 6.80 };
+
+// ============ Init ============
+document.addEventListener('DOMContentLoaded', async function() {
+  console.log('=== ARK Mall v2 Init ===');
+  console.log('API:', API);
+  await loadPrices();
+  await loadProducts();
+  await loadMerchants();
+});
+
+// ============ Prices ============
+async function loadPrices() {
+  try {
+    const res = await fetch(API + '/prices');
+    const data = await res.json();
+    prices.bnb = data.bnb || 580;
+    prices.ark = data.ark || 7.80;
+    prices.usdCny = data.usdCny || 6.80;
+    console.log('Prices loaded:', prices);
+  } catch(e) {
+    console.warn('Price load failed, using defaults:', e.message);
+  }
+  document.getElementById('priceBNB').textContent = '$' + prices.bnb.toFixed(2);
+  document.getElementById('priceARK').textContent = '$' + prices.ark.toFixed(2);
+  document.getElementById('priceCNY').textContent = '1 USD = ' + prices.usdCny.toFixed(2) + ' CNY';
+}
+
+// ============ Format Price ============
+function fmt(usd) {
+  usd = parseFloat(usd);
+  if (isNaN(usd) || usd <= 0) return '價格不可用';
+  var cny = (usd * prices.usdCny).toFixed(2);
+  var bnb = (usd / prices.bnb).toFixed(6);
+  var ark = (usd / prices.ark).toFixed(2);
+  return '$' + usd.toFixed(2) + ' / ¥' + cny + ' / ' + bnb + ' BNB / ' + ark + ' ARK';
+}
+
+// ============ Products ============
+async function loadProducts() {
+  try {
+    const res = await fetch(API + '/products');
+    allProducts = await res.json();
+    console.log('Products loaded:', allProducts.length);
+  } catch(e) {
+    console.error('Products load failed:', e.message);
+    allProducts = [];
+  }
+  renderProducts();
+}
+
+function renderProducts() {
+  var grid = document.getElementById('productsGrid');
+  if (!grid) { console.error('productsGrid not found'); return; }
+  if (allProducts.length === 0) {
+    grid.innerHTML = '<p class="empty">暫無商品</p>';
+    return;
+  }
+  grid.innerHTML = allProducts.map(function(p) {
+    return '<div class="product-card" onclick="showDetail(' + p.id + ')">' +
+      '<img src="' + (p.image_url || 'https://picsum.photos/400/300?random=' + p.id) + '" alt="' + p.name + '">' +
+      '<div class="info">' +
+        '<div class="name">' + p.name + '</div>' +
+        '<div class="price">' + fmt(p.price) + '</div>' +
+        '<div class="merchant">' + (p.merchant_name || '') + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ============ Detail ============
+function showDetail(id) {
+  var p = allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  var html = '<div class="detail">' +
+    '<img src="' + (p.image_url || 'https://picsum.photos/400/300?random=' + p.id) + '">' +
+    '<h2>' + p.name + '</h2>' +
+    '<div class="price">' + fmt(p.price) + '</div>' +
+    '<div class="desc">' + (p.description || '暫無描述') + '</div>' +
+    '<div class="meta"><span>庫存: ' + (p.stock || 0) + '</span><span>分類: ' + (p.category || '未分類') + '</span></div>' +
+    '<button class="btn btn-primary" onclick="addToCart(' + p.id + ')">加入購物車</button>' +
+    '<div class="merchant-info">' +
+      '<h4>商家信息</h4>' +
+      '<p>' + (p.merchant_name || '未知商家') + '</p>' +
+      '<p>TP 錢包地址:</p>' +
+      '<div class="tp">' + (p.merchant_tp_address || '未設置') + '</div>' +
+      (p.merchant_qrcode ? '<img src="' + p.merchant_qrcode + '">' : '') +
+    '</div>' +
+  '</div>';
+  document.getElementById('detailContent').innerHTML = html;
+  showPage('detail');
+}
+
+// ============ Merchants ============
+async function loadMerchants() {
+  try {
+    const res = await fetch(API + '/merchants');
+    allMerchants = await res.json();
+    console.log('Merchants loaded:', allMerchants.length);
+  } catch(e) {
+    allMerchants = [];
+  }
+  renderMerchants();
+}
+
+function renderMerchants() {
+  var el = document.getElementById('merchantsList');
+  if (allMerchants.length === 0) {
+    el.innerHTML = '<p class="empty">暫無商家</p>';
+    return;
+  }
+  el.innerHTML = allMerchants.map(function(m) {
+    return '<div class="merchant-card">' +
+      '<h3>' + m.name + '</h3>' +
+      '<p>' + (m.description || '暫無介紹') + '</p>' +
+      '<p>TP 錢包地址:</p>' +
+      '<div class="tp">' + m.tp_address + '</div>' +
+      (m.qrcode_url ? '<img src="' + m.qrcode_url + '">' : '') +
+    '</div>';
+  }).join('');
+}
+
+// ============ Cart ============
+function addToCart(productId) {
+  var p = allProducts.find(function(x) { return x.id === productId; });
+  if (!p) return;
+  var existing = cart.find(function(x) { return x.id === productId; });
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cart.push({ id: p.id, name: p.name, price: p.price, image_url: p.image_url, qty: 1, merchant_name: p.merchant_name, merchant_tp_address: p.merchant_tp_address });
+  }
+  localStorage.setItem('ark_cart', JSON.stringify(cart));
+  showToast('已加入購物車');
+}
+
+function renderCart() {
+  var el = document.getElementById('cartContent');
+  if (cart.length === 0) {
+    el.innerHTML = '<p class="empty">購物車是空的</p>';
+    return;
+  }
+  var total = cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
+  el.innerHTML = cart.map(function(item, i) {
+    return '<div class="cart-item">' +
+      '<img src="' + (item.image_url || 'https://picsum.photos/400/300?random=' + item.id) + '">' +
+      '<div class="info">' +
+        '<div class="name">' + item.name + '</div>' +
+        '<div class="price">' + fmt(item.price) + '</div>' +
+        '<div class="qty">' +
+          '<button onclick="changeQty(' + i + ',-1)">-</button>' +
+          '<span>' + item.qty + '</span>' +
+          '<button onclick="changeQty(' + i + ',1)">+</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('') +
+    '<div style="background:#fff;border-radius:12px;padding:15px;margin-bottom:15px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:bold">' +
+        '<span>總計</span><span style="color:#e74c3c">' + fmt(total) + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<button class="btn btn-primary" onclick="checkout()">結算</button>';
+}
+
+function changeQty(index, delta) {
+  cart[index].qty += delta;
+  if (cart[index].qty <= 0) cart.splice(index, 1);
+  localStorage.setItem('ark_cart', JSON.stringify(cart));
+  renderCart();
+}
+
+async function checkout() {
+  if (cart.length === 0) { showToast('購物車是空的'); return; }
+  for (var i = 0; i < cart.length; i++) {
+    try {
+      await fetch(API + '/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: cart[i].id, quantity: cart[i].qty })
+      });
+    } catch(e) {}
+  }
+  cart = [];
+  localStorage.setItem('ark_cart', JSON.stringify(cart));
+  document.getElementById('cartContent').innerHTML = '<div class="success"><h2>下單成功！</h2><p>請聯繫商家完成付款</p></div>';
+  showToast('下單成功');
+}
+
+// ============ Join ============
+async function submitJoin() {
+  var name = document.getElementById('joinName').value.trim();
+  var desc = document.getElementById('joinDesc').value.trim();
+  var tp = document.getElementById('joinTP').value.trim();
+  var qrFile = document.getElementById('joinQR').files[0];
+
+  if (!name) { showToast('請輸入商家名稱'); return; }
+  if (!tp) { showToast('請輸入 TP 錢包地址'); return; }
+  if (!tp.startsWith('0x')) { showToast('TP 錢包地址格式錯誤'); return; }
+
+  var qrUrl = '';
+  if (qrFile) {
+    var formData = new FormData();
+    formData.append('file', qrFile);
+    try {
+      var uploadRes = await fetch(API + '/upload', { method: 'POST', body: formData });
+      var uploadData = await uploadRes.json();
+      if (uploadData.success) qrUrl = uploadData.url;
+    } catch(e) {}
+  }
+
+  try {
+    var res = await fetch(API + '/merchants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, description: desc, tp_address: tp, qrcode_url: qrUrl })
+    });
+    var data = await res.json();
+    if (data.success) {
+      document.getElementById('joinName').value = '';
+      document.getElementById('joinDesc').value = '';
+      document.getElementById('joinTP').value = '';
+      document.getElementById('joinQR').value = '';
+      showToast('入駐申請已提交，等待審核');
+      showPage('home');
+    } else {
+      showToast('提交失敗: ' + (data.error || ''));
+    }
+  } catch(e) {
+    showToast('網絡錯誤');
+  }
+}
+
+// ============ Navigation ============
+function showPage(page) {
+  var pages = document.querySelectorAll('.page');
+  for (var i = 0; i < pages.length; i++) pages[i].classList.remove('active');
+  var el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+
+  var btns = document.querySelectorAll('.nav button');
+  for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+  var labels = ['home', 'merchants', 'cart', 'join'];
+  var idx = labels.indexOf(page);
+  if (idx >= 0 && idx < btns.length) btns[idx].classList.add('active');
+
+  if (page === 'cart') renderCart();
+}
+
+// ============ Toast ============
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 2500);
+}
+</script>
 </body>
 </html>
