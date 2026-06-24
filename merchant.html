@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商家後台 — ARK Mall</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .shop-header {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px;
+    }
+    .shop-avatar {
+      width: 60px; height: 60px; border-radius: 12px; background: var(--c1);
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+    }
+    .shop-info h2 { font-size: 18px; color: var(--c1); }
+    .shop-info p { font-size: 13px; color: var(--muted); }
+    .shop-status { margin-left: auto; }
+    .order-item-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; margin-bottom: 12px;
+    }
+    .order-item-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .order-product-list { font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏪 商家後台</h1>
+  <div class="header-right">
+    <div class="nav">
+      <a href="/">商城</a>
+      <a href="/merchant" class="active">商家後台</a>
+      <a href="/admin">管理後台</a>
+    </div>
+    <button class="wallet-btn" id="walletBtn">連接錢包</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Shop Info -->
+  <div id="shopSection">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:4px;">
+    <button class="tab-btn active" onclick="switchTab('products')">我的商品</button>
+    <button class="tab-btn" onclick="switchTab('orders')">收到的訂單</button>
+    <button class="tab-btn" onclick="switchTab('settings')">店鋪設置</button>
+  </div>
+
+  <!-- My Products -->
+  <div class="tab-panel active" id="panel-products">
+    <div style="margin-bottom:12px;">
+      <button class="btn btn-primary btn-sm" onclick="showAddProduct()">+ 添加商品</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>圖片</th>
+            <th>名稱</th>
+            <th>價格</th>
+            <th>庫存</th>
+            <th>類別</th>
+            <th>狀態</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="productsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Orders -->
+  <div class="tab-panel" id="panel-orders">
+    <div id="ordersContainer"></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="tab-panel" id="panel-settings">
+    <div class="modal" style="max-width:600px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;">
+      <h2 style="margin-bottom:16px;color:var(--c1);">🏪 店鋪設置</h2>
+      <div class="form-group">
+        <label>店鋪名稱</label>
+        <input type="text" id="setName" placeholder="你的店鋪名稱">
+      </div>
+      <div class="form-group">
+        <label>TP 錢包收款地址</label>
+        <input type="text" id="setAddress" placeholder="0x...">
+      </div>
+      <div class="form-group">
+        <label>收款二維碼</label>
+        <input type="file" id="setQrcode" accept="image/*">
+        <div id="qrcodePreview" style="margin-top:8px;"></div>
+      </div>
+      <div class="form-group">
+        <label>聯繫方式</label>
+        <input type="text" id="setContact" placeholder="微信 / Telegram / Email">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="saveSettings()">保存設置</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="addProductModal">
+  <div class="modal">
+    <button class="modal-close" onclick="hideModal('addProductModal')">&times;</button>
+    <h2>添加商品</h2>
+    <div class="form-group">
+      <label>商品名稱</label>
+      <input type="text" id="pName" placeholder="商品名稱">
+    </div>
+    <div class="form-group">
+      <label>描述</label>
+      <textarea id="pDesc" placeholder="商品描述"></textarea>
+    </div>
+    <div class="form-group">
+      <label>價格 (USD)</label>
+      <input type="number" id="pPrice" step="0.01" placeholder="29.99">
+    </div>
+    <div class="form-group">
+      <label>庫存</label>
+      <input type="number" id="pStock" placeholder="100">
+    </div>
+    <div class="form-group">
+      <label>類別</label>
+      <input type="text" id="pCategory" placeholder="周邊 / 食品 / 數碼">
+    </div>
+    <div class="form-group">
+      <label>圖片 URL</label>
+      <input type="text" id="pImage" placeholder="https://...">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="addProduct()">添加</button>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  let myMerchantId = null;
+  let allMerchants = [];
+  let allProducts = [];
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  // ---- 找到我的商家信息 ----
+  async function findMyShop() {
+    try {
+      allMerchants = await api('/merchants');
+      allProducts = await api('/products');
+      const shopEl = document.getElementById('shopSection');
+
+      // 通過錢包地址匹配
+      if (walletAddress) {
+        const mine = allMerchants.find(m =>
+          m.wallet_address && m.wallet_address.toLowerCase() === walletAddress.toLowerCase()
+        );
+        if (mine) {
+          myMerchantId = mine.id;
+          shopEl.innerHTML = `
+            <div class="shop-header">
+              <div class="shop-avatar">🏪</div>
+              <div class="shop-info">
+                <h2>${mine.name}</h2>
+                <p>${mine.tp_address ? '收款: ' + mine.tp_address.slice(0,10) + '...' : ''}</p>
+              </div>
+              <div class="shop-status">
+                <span class="badge badge-${mine.status}">${mine.status === 'approved' ? '✅ 已認證' : mine.status === 'pending' ? '⏳ 待審核' : '❌ 已拒絕'}</span>
+              </div>
+            </div>
+          `;
+          // 載入我的商品
+          loadMyProducts();
+          loadMyOrders();
+          loadSettings(mine);
+          return;
+        }
+      }
+
+      // 沒有匹配的商家
+      shopEl.innerHTML = `
+        <div class="empty">
+          <p>你還沒有店鋪</p>
+          <a href="/" class="btn btn-primary">去商城入駐</a>
+        </div>
+      `;
+    } catch (e) {
+      document.getElementById('shopSection').innerHTML = '<div class="empty"><p>加載失敗</p></div>';
+    }
+  }
+
+  // ---- 我的商品 ----
+  function loadMyProducts() {
+    const myProducts = allProducts.filter(p => p.merchant_id === myMerchantId);
+    const tbody = document.getElementById('productsTbody');
+    if (!myProducts.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">暫無商品</td></tr>';
+      return;
+    }
+    tbody.innerHTML = myProducts.map(p => `
+      <tr>
+        <td><img src="${p.image_url || 'https://picsum.photos/60/60?random=' + p.id}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;"></td>
+        <td><strong>${p.name}</strong></td>
+        <td style="color:var(--c1);">$${fmt(p.price)}</td>
+        <td>${p.stock}</td>
+        <td>${p.category || '—'}</td>
+        <td><span class="badge badge-${p.status || 'active'}">${p.status === 'active' ? '上架' : '下架'}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="toggleProduct(${p.id}, '${p.status === 'active' ? 'inactive' : 'active'}')">${p.status === 'active' ? '下架' : '上架'}</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function showAddProduct() { showModal('addProductModal'); }
+
+  async function addProduct() {
+    if (!myMerchantId) return toast('你還沒有店鋪', 'error');
+    const name = document.getElementById('pName').value.trim();
+    const price = parseFloat(document.getElementById('pPrice').value);
+    if (!name || isNaN(price)) return toast('請填寫商品名稱和價格', 'error');
+    try {
+      await api('/products', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          description: document.getElementById('pDesc').value.trim(),
+          price,
+          stock: parseInt(document.getElementById('pStock').value) || 100,
+          category: document.getElementById('pCategory').value.trim(),
+          image_url: document.getElementById('pImage').value.trim(),
+          merchant_id: myMerchantId
+        })
+      });
+      toast('商品已添加', 'success');
+      hideModal('addProductModal');
+      allProducts = await api('/products');
+      loadMyProducts();
+    } catch (e) { toast('添加失敗: ' + e.message, 'error'); }
+  }
+
+  async function toggleProduct(id, status) {
+    try {
+      await api('/products/' + id, { method: 'PUT', body: JSON.stringify({ status }) });
+      toast('已更新', 'success');
+      allProducts = await api('/products');
+      loadMyProducts();
+    } catch (e) { toast('操作失敗', 'error'); }
+  }
+
+  // ---- 我的訂單 ----
+  async function loadMyOrders() {
+    try {
+      const orders = await api('/orders');
+      const myOrders = orders.filter(o => {
+        if (!o.items) return false;
+        return o.items.some(i => {
+          const product = allProducts.find(p => p.id === i.product_id);
+          return product && product.merchant_id === myMerchantId;
+        });
+      });
+      const container = document.getElementById('ordersContainer');
+      if (!myOrders.length) {
+        container.innerHTML = '<div class="empty"><p>暫無訂單</p></div>';
+        return;
+      }
+      container.innerHTML = myOrders.map(o => `
+        <div class="order-item-card">
+          <div class="order-item-header">
+            <strong>訂單 #${o.id}</strong>
+            <span class="badge badge-${o.status}">${o.status === 'pending' ? '待發貨' : o.status === 'shipped' ? '已發貨' : '已完成'}</span>
+          </div>
+          <div class="order-product-list">
+            ${o.items.map(i => {
+              const p = allProducts.find(x => x.id === i.product_id);
+              return `<div>• ${p ? p.name : '商品#' + i.product_id} x${i.qty} — $${fmt(i.price * i.qty)}</div>`;
+            }).join('')}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+            <span style="color:var(--c1);font-weight:600;">總計: ${fmtCNY(o.total)}</span>
+            ${o.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="shipOrder(${o.id})">確認發貨</button>` : ''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+            買家: ${o.buyer_address ? o.buyer_address.slice(0,10) + '...' : '—'} | ${o.created_at ? new Date(o.created_at).toLocaleString() : ''}
+          </div>
+        </div>
+      `).join('');
+    } catch (e) { console.error(e); }
+  }
+
+  async function shipOrder(orderId) {
+    try {
+      await api('/orders/' + orderId, { method: 'PUT', body: JSON.stringify({ status: 'shipped' }) });
+      toast('已確認發貨', 'success');
+      loadMyOrders();
+    } catch (e) { toast('操作失敗', 'error'); }
+  }
+
+  // ---- 店鋪設置 ----
+  function loadSettings(merchant) {
+    document.getElementById('setName').value = merchant.name || '';
+    document.getElementById('setAddress').value = merchant.tp_address || '';
+    document.getElementById('setContact').value = merchant.contact || '';
+    if (merchant.qrcode_url) {
+      document.getElementById('qrcodePreview').innerHTML = `<img src="${merchant.qrcode_url}" style="width:120px;border-radius:8px;">`;
+    }
+  }
+
+  async function saveSettings() {
+    if (!myMerchantId) return;
+    try {
+      const name = document.getElementById('setName').value.trim();
+      const tp_address = document.getElementById('setAddress').value.trim();
+      const contact = document.getElementById('setContact').value.trim();
+      await api('/merchants/' + myMerchantId, {
+        method: 'PUT',
+        body: JSON.stringify({ name, tp_address, contact })
+      });
+      toast('店鋪信息已更新', 'success');
+    } catch (e) { toast('保存失敗: ' + e.message, 'error'); }
+  }
+
+  // ---- Init ----
+  // 錢包連接後再找我的店鋪
+  const origConnect = connectWallet;
+  findMyShop();
+
+  // 錢包狀態變化時重新載入
+  const walletBtn = document.getElementById('walletBtn');
+  const checkWallet = setInterval(() => {
+    if (walletAddress && !myMerchantId) {
+      findMyShop();
+    }
+  }, 2000);
+
+  // 如果已連接就立即載入
+  if (walletAddress) findMyShop();
+</script>
+</body>
+</html>

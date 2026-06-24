@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理後台 — ARK Mall</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+    .tab-btn {
+      padding: 10px 20px; border: none; background: none; color: var(--muted);
+      font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+    .tab-btn.active { color: var(--c1); border-bottom-color: var(--c1); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; text-align: center;
+    }
+    .stat-card .num { font-size: 28px; font-weight: 700; color: var(--c1); }
+    .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚙️ 管理後台</h1>
+  <div class="header-right">
+    <div class="nav">
+      <a href="/">商城</a>
+      <a href="/merchant">商家後台</a>
+      <a href="/admin" class="active">管理後台</a>
+    </div>
+    <button class="wallet-btn" id="walletBtn">連接錢包</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Stats -->
+  <div class="stat-cards" id="statCards"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('merchants')">商家管理</button>
+    <button class="tab-btn" onclick="switchTab('products')">商品管理</button>
+    <button class="tab-btn" onclick="switchTab('orders')">訂單管理</button>
+  </div>
+
+  <!-- Merchants Panel -->
+  <div class="tab-panel active" id="panel-merchants">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>店鋪名稱</th>
+            <th>TP 錢包</th>
+            <th>聯繫方式</th>
+            <th>狀態</th>
+            <th>入駐時間</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="merchantsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Products Panel -->
+  <div class="tab-panel" id="panel-products">
+    <div style="margin-bottom:12px;">
+      <button class="btn btn-primary btn-sm" onclick="showAddProduct()">+ 添加商品</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>商品名稱</th>
+            <th>價格 (USD)</th>
+            <th>庫存</th>
+            <th>類別</th>
+            <th>狀態</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="productsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Orders Panel -->
+  <div class="tab-panel" id="panel-orders">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>訂單號</th>
+            <th>買家地址</th>
+            <th>商品</th>
+            <th>總金額</th>
+            <th>狀態</th>
+            <th>下單時間</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="addProductModal">
+  <div class="modal">
+    <button class="modal-close" onclick="hideModal('addProductModal')">&times;</button>
+    <h2>添加商品</h2>
+    <div class="form-group">
+      <label>商品名稱</label>
+      <input type="text" id="pName" placeholder="商品名稱">
+    </div>
+    <div class="form-group">
+      <label>描述</label>
+      <textarea id="pDesc" placeholder="商品描述"></textarea>
+    </div>
+    <div class="form-group">
+      <label>價格 (USD)</label>
+      <input type="number" id="pPrice" step="0.01" placeholder="29.99">
+    </div>
+    <div class="form-group">
+      <label>庫存</label>
+      <input type="number" id="pStock" placeholder="100">
+    </div>
+    <div class="form-group">
+      <label>類別</label>
+      <input type="text" id="pCategory" placeholder="周邊 / 食品 / 數碼">
+    </div>
+    <div class="form-group">
+      <label>圖片 URL</label>
+      <input type="text" id="pImage" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label>所屬商家 ID</label>
+      <input type="number" id="pMerchantId" placeholder="1">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="addProduct()">添加</button>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  // ---- Stats ----
+  async function loadStats() {
+    try {
+      const [merchants, products, orders] = await Promise.all([
+        api('/merchants'),
+        api('/products'),
+        api('/orders')
+      ]);
+      document.getElementById('statCards').innerHTML = `
+        <div class="stat-card"><div class="num">${merchants.length}</div><div class="label">商家總數</div></div>
+        <div class="stat-card"><div class="num">${merchants.filter(m => m.status === 'pending').length}</div><div class="label">待審核</div></div>
+        <div class="stat-card"><div class="num">${products.length}</div><div class="label">商品總數</div></div>
+        <div class="stat-card"><div class="num">${orders.length}</div><div class="label">訂單總數</div></div>
+        <div class="stat-card"><div class="num">${fmtCNY(orders.reduce((s, o) => s + (o.total || 0), 0))}</div><div class="label">總營業額</div></div>
+      `;
+    } catch (e) { console.error(e); }
+  }
+
+  // ---- Merchants ----
+  async function loadMerchants() {
+    try {
+      const merchants = await api('/merchants');
+      const tbody = document.getElementById('merchantsTbody');
+      if (!merchants.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">暫無商家</td></tr>'; return; }
+      tbody.innerHTML = merchants.map(m => `
+        <tr>
+          <td>${m.id}</td>
+          <td><strong>${m.name}</strong></td>
+          <td style="font-family:monospace;font-size:12px;">${m.tp_address ? m.tp_address.slice(0,10)+'...' : '—'}</td>
+          <td>${m.contact || '—'}</td>
+          <td><span class="badge badge-${m.status}">${m.status === 'approved' ? '已通過' : m.status === 'pending' ? '待審核' : '已拒絕'}</span></td>
+          <td>${m.created_at ? new Date(m.created_at).toLocaleDateString() : '—'}</td>
+          <td>
+            ${m.status === 'pending' ? `
+              <button class="btn btn-success btn-sm" onclick="approveMerchant(${m.id})">通過</button>
+              <button class="btn btn-danger btn-sm" onclick="rejectMerchant(${m.id})">拒絕</button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) { toast('加載商家失敗', 'error'); }
+  }
+
+  async function approveMerchant(id) {
+    try {
+      await api('/merchants/' + id + '/approve', { method: 'PUT' });
+      toast('商家已通過', 'success');
+      loadMerchants(); loadStats();
+    } catch (e) { toast('操作失敗: ' + e.message, 'error'); }
+  }
+
+  async function rejectMerchant(id) {
+    try {
+      await api('/merchants/' + id, { method: 'PUT', body: JSON.stringify({ status: 'rejected' }) });
+      toast('商家已拒絕', 'info');
+      loadMerchants(); loadStats();
+    } catch (e) { toast('操作失敗: ' + e.message, 'error'); }
+  }
+
+  // ---- Products ----
+  async function loadProducts() {
+    try {
+      const products = await api('/products');
+      const tbody = document.getElementById('productsTbody');
+      if (!products.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">暫無商品</td></tr>'; return; }
+      tbody.innerHTML = products.map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td><strong>${p.name}</strong></td>
+          <td>$${fmt(p.price)}</td>
+          <td>${p.stock}</td>
+          <td>${p.category || '—'}</td>
+          <td><span class="badge badge-${p.status || 'active'}">${p.status === 'active' ? '上架' : p.status === 'inactive' ? '下架' : '—'}</span></td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="toggleProduct(${p.id}, '${p.status === 'active' ? 'inactive' : 'active'}')">
+              ${p.status === 'active' ? '下架' : '上架'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) { toast('加載商品失敗', 'error'); }
+  }
+
+  function showAddProduct() { showModal('addProductModal'); }
+
+  async function addProduct() {
+    const name = document.getElementById('pName').value.trim();
+    const price = parseFloat(document.getElementById('pPrice').value);
+    if (!name || isNaN(price)) return toast('請填寫商品名稱和價格', 'error');
+    try {
+      await api('/products', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          description: document.getElementById('pDesc').value.trim(),
+          price,
+          stock: parseInt(document.getElementById('pStock').value) || 100,
+          category: document.getElementById('pCategory').value.trim(),
+          image_url: document.getElementById('pImage').value.trim(),
+          merchant_id: parseInt(document.getElementById('pMerchantId').value) || 1
+        })
+      });
+      toast('商品已添加', 'success');
+      hideModal('addProductModal');
+      loadProducts(); loadStats();
+    } catch (e) { toast('添加失敗: ' + e.message, 'error'); }
+  }
+
+  async function toggleProduct(id, status) {
+    try {
+      await api('/products/' + id, { method: 'PUT', body: JSON.stringify({ status }) });
+      toast('商品已更新', 'success');
+      loadProducts();
+    } catch (e) { toast('操作失敗', 'error'); }
+  }
+
+  // ---- Orders ----
+  async function loadOrders() {
+    try {
+      const orders = await api('/orders');
+      const tbody = document.getElementById('ordersTbody');
+      if (!orders.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">暫無訂單</td></tr>'; return; }
+      tbody.innerHTML = orders.map(o => `
+        <tr>
+          <td>#${o.id}</td>
+          <td style="font-family:monospace;font-size:12px;">${o.buyer_address ? o.buyer_address.slice(0,10)+'...' : '—'}</td>
+          <td>${o.items ? o.items.length + ' 件商品' : '—'}</td>
+          <td style="color:var(--c1);font-weight:600;">${fmtCNY(o.total)}</td>
+          <td><span class="badge badge-${o.status}">${o.status === 'pending' ? '待發貨' : o.status === 'shipped' ? '已發貨' : o.status === 'completed' ? '已完成' : o.status}</span></td>
+          <td>${o.created_at ? new Date(o.created_at).toLocaleString() : '—'}</td>
+        </tr>
+      `).join('');
+    } catch (e) { toast('加載訂單失敗', 'error'); }
+  }
+
+  // ---- Init ----
+  loadStats();
+  loadMerchants();
+  loadProducts();
+  loadOrders();
+</script>
+</body>
+</html>
