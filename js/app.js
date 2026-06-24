@@ -208,7 +208,7 @@ async function loadProducts() {
 
 // 渲染商品列表
 function renderProducts(productsToRender) {
-    const container = document.getElementById('productGrid');
+    const container = document.getElementById('productsGrid');
     if (!container) {
         console.error('productGrid 不存在');
         return;
