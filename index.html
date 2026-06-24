@@ -2,402 +2,312 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>ARK Mall</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#333}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#333}
 .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;text-align:center}
-.header h1{font-size:24px;margin-bottom:5px}
-.header p{font-size:14px;opacity:0.9}
-.price-bar{background:#1a1a2e;color:#fff;padding:12px 20px;text-align:center;font-size:14px}
-.price-bar span{margin:0 10px}
-.price-bar .label{opacity:0.7}
-.price-bar .value{color:#00d4aa;font-weight:bold}
-.nav{display:flex;background:#fff;border-bottom:1px solid #eee;overflow-x:auto}
-.nav button{flex:1;padding:12px 8px;border:none;background:none;font-size:14px;cursor:pointer;white-space:nowrap;color:#666}
-.nav button.active{color:#667eea;border-bottom:2px solid #667eea;font-weight:bold}
-.container{max-width:800px;margin:0 auto;padding:15px}
-.page{display:none}
-.page.active{display:block}
-.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-.product-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);cursor:pointer}
-.product-card img{width:100%;height:150px;object-fit:cover}
-.product-card .info{padding:12px}
-.product-card .name{font-size:14px;font-weight:bold;margin-bottom:6px}
-.product-card .price{color:#e74c3c;font-size:13px;line-height:1.5}
-.product-card .merchant{color:#999;font-size:11px;margin-top:4px}
-.detail{background:#fff;border-radius:12px;padding:20px;margin-bottom:15px}
-.detail img{width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:15px}
-.detail h2{font-size:20px;margin-bottom:10px}
-.detail .price{color:#e74c3c;font-size:16px;line-height:1.8;margin-bottom:10px}
-.detail .desc{color:#666;font-size:14px;line-height:1.6;margin-bottom:15px}
-.detail .meta{display:flex;gap:15px;color:#999;font-size:12px;margin-bottom:15px}
-.merchant-info{background:#f8f9fa;border-radius:8px;padding:15px;margin-top:15px}
-.merchant-info h4{margin-bottom:8px;color:#667eea}
-.merchant-info p{font-size:13px;color:#666;margin-bottom:4px}
-.merchant-info .tp{font-family:monospace;font-size:12px;word-break:break-all;background:#e8e8e8;padding:6px;border-radius:4px}
-.merchant-info img{max-width:200px;margin-top:10px;border-radius:8px}
-.btn{display:block;width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;text-align:center}
+.header h1{font-size:28px;margin-bottom:4px}
+.header p{opacity:.85;font-size:14px}
+.price-bar{background:#fff;padding:12px 16px;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;border-bottom:1px solid #eee;position:sticky;top:0;z-index:100}
+.price-item{font-size:13px;color:#555}
+.price-item span{font-weight:700;color:#111}
+.price-item i{margin-right:4px}
+.container{max-width:1200px;margin:0 auto;padding:16px}
+.section-title{font-size:20px;font-weight:700;margin:20px 0 12px;padding-left:12px;border-left:4px solid #667eea}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);transition:transform .2s}
+.card:hover{transform:translateY(-3px)}
+.card img{width:100%;height:200px;object-fit:cover}
+.card-body{padding:14px}
+.card-body h3{font-size:16px;margin-bottom:6px}
+.card-body .desc{font-size:13px;color:#888;margin-bottom:8px}
+.card-body .merchant{font-size:12px;color:#667eea;margin-bottom:8px}
+.prices{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.prices .tag{background:#f0f2f5;padding:3px 8px;border-radius:6px;font-size:12px}
+.prices .tag.usd{color:#059669;font-weight:700}
+.btn{display:inline-block;padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-decoration:none;transition:opacity .2s}
+.btn:hover{opacity:.85}
 .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
-.btn-back{background:#f0f0f0;color:#666;margin-bottom:15px}
-.form-group{margin-bottom:15px}
-.form-group label{display:block;font-size:14px;font-weight:bold;margin-bottom:6px}
-.form-group input,.form-group textarea,.form-group select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px}
-.form-group textarea{height:80px;resize:vertical}
-.merchant-card{background:#fff;border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-.merchant-card h3{font-size:16px;margin-bottom:6px}
-.merchant-card p{font-size:13px;color:#666;margin-bottom:4px}
-.merchant-card .tp{font-family:monospace;font-size:11px;color:#999;word-break:break-all}
-.merchant-card img{max-width:100px;margin-top:8px;border-radius:6px}
-.cart-item{background:#fff;border-radius:12px;padding:15px;margin-bottom:12px;display:flex;gap:12px;align-items:center}
-.cart-item img{width:80px;height:60px;object-fit:cover;border-radius:8px}
-.cart-item .info{flex:1}
-.cart-item .name{font-weight:bold;font-size:14px}
-.cart-item .price{color:#e74c3c;font-size:13px}
-.cart-item .qty{display:flex;align-items:center;gap:10px;margin-top:6px}
-.cart-item .qty button{width:28px;height:28px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:16px;cursor:pointer}
-.empty{text-align:center;padding:40px;color:#999}
-.success{text-align:center;padding:40px}
-.success h2{color:#27ae60;margin-bottom:10px}
-.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999;display:none}
-@media(max-width:480px){.products-grid{grid-template-columns:1fr}}
+.btn-outline{background:transparent;border:1.5px solid #667eea;color:#667eea}
+.btn-sm{padding:5px 12px;font-size:12px}
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{margin-bottom:16px}
+.modal .close{float:right;font-size:24px;cursor:pointer;color:#999}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:13px;color:#666;margin-bottom:4px}
+.modal .field input,.modal .field textarea,.modal .field select{width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:14px}
+.modal .field textarea{resize:vertical;min-height:60px}
+.merchant-info{background:#f8f9fa;border-radius:8px;padding:12px;margin-top:10px;font-size:12px}
+.merchant-info h4{margin-bottom:6px;color:#667eea}
+.merchant-info .addr{word-break:break-all;font-family:monospace;color:#555}
+.qr-img{max-width:150px;margin-top:8px;border-radius:8px}
+/* Cart */
+.cart-float{position:fixed;bottom:20px;right:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 12px rgba(102,126,234,.5);cursor:pointer;z-index:90}
+.cart-float .badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:11px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+/* Toast */
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;z-index:999;display:none}
+.toast.show{display:block;animation:fadeInOut 2s}
+@keyframes fadeInOut{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+/* Merchant Registration */
+.reg-section{background:#fff;border-radius:12px;padding:20px;margin:20px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.reg-section h3{margin-bottom:12px}
 </style>
 </head>
 <body>
-
 <div class="header">
-  <h1>ARK Mall</h1>
-  <p>使用 ARK / BNB 購買全球商品</p>
+  <h1><i class="fas fa-store"></i> ARK Mall</h1>
+  <p>加密貨幣電商平台</p>
 </div>
-
 <div class="price-bar" id="priceBar">
-  <span><span class="label">BNB:</span> <span class="value" id="priceBNB">載入中...</span></span>
-  <span><span class="label">ARK:</span> <span class="value" id="priceARK">載入中...</span></span>
-  <span><span class="label">匯率:</span> <span class="value" id="priceCNY">載入中...</span></span>
+  <div class="price-item"><i class="fas fa-coins" style="color:#f0b90b"></i>BNB: <span id="pBnb">...</span></div>
+  <div class="price-item"><i class="fas fa-dragon" style="color:#667eea"></i>ARK: <span id="pArk">...</span></div>
+  <div class="price-item"><i class="fas fa-dollar-sign" style="color:#059669"></i>USD/CNY: <span id="pCny">...</span></div>
 </div>
-
-<div class="nav" id="navBar">
-  <button class="active" onclick="showPage('home')">商品</button>
-  <button onclick="showPage('merchants')">商家</button>
-  <button onclick="showPage('cart')">購物車</button>
-  <button onclick="showPage('join')">入駐</button>
-</div>
-
 <div class="container">
-  <!-- 首頁 -->
-  <div class="page active" id="page-home">
-    <div class="products-grid" id="productsGrid"></div>
-  </div>
+  <div class="section-title">商品</div>
+  <div class="grid" id="productsGrid"></div>
 
-  <!-- 商品詳情 -->
-  <div class="page" id="page-detail">
-    <button class="btn btn-back" onclick="showPage('home')">← 返回</button>
-    <div id="detailContent"></div>
+  <div class="reg-section">
+    <h3><i class="fas fa-store-alt"></i> 商家入駐</h3>
+    <p style="font-size:13px;color:#888;margin-bottom:12px">填寫以下信息申請成為商家</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+      <div class="field" style="flex:1;min-width:150px"><label>商家名稱</label><input id="regName" placeholder="店名"></div>
+      <div class="field" style="flex:1;min-width:150px"><label>TP 錢包地址</label><input id="regAddr" placeholder="0x..."></div>
+      <div class="field" style="flex:1;min-width:150px"><label>簡介</label><input id="regDesc" placeholder="經營類目"></div>
+    </div>
+    <div style="margin-top:10px">
+      <label style="font-size:13px;color:#666">收款二維碼（圖片）</label>
+      <input type="file" id="regQrFile" accept="image/*" style="margin-top:4px">
+    </div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="registerMerchant()">提交入駐</button>
   </div>
+</div>
 
-  <!-- 商家列表 -->
-  <div class="page" id="page-merchants">
-    <div id="merchantsList"></div>
-  </div>
-
-  <!-- 購物車 -->
-  <div class="page" id="page-cart">
-    <div id="cartContent"></div>
-  </div>
-
-  <!-- 商家入駐 -->
-  <div class="page" id="page-join">
-    <div style="background:#fff;border-radius:12px;padding:20px">
-      <h2 style="margin-bottom:15px">商家入駐</h2>
-      <div class="form-group">
-        <label>商家名稱 *</label>
-        <input type="text" id="joinName" placeholder="請輸入商家名稱">
-      </div>
-      <div class="form-group">
-        <label>商家介紹</label>
-        <textarea id="joinDesc" placeholder="請輸入商家介紹"></textarea>
-      </div>
-      <div class="form-group">
-        <label>TP 錢包收款地址 *</label>
-        <input type="text" id="joinTP" placeholder="0x...">
-      </div>
-      <div class="form-group">
-        <label>收款二維碼</label>
-        <input type="file" id="joinQR" accept="image/*">
-        <div id="joinQRPreview" style="margin-top:8px"></div>
-      </div>
-      <button class="btn btn-primary" onclick="submitJoin()">提交入駐申請</button>
+<!-- Product Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <span class="close" onclick="closeModal('detailModal')">&times;</span>
+    <h2 id="dName"></h2>
+    <img id="dImg" style="width:100%;border-radius:8px;margin-bottom:12px">
+    <p id="dDesc" style="color:#666;margin-bottom:12px"></p>
+    <div class="prices" id="dPrices"></div>
+    <div class="merchant-info" id="dMerchant"></div>
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+      <label style="font-size:14px">數量:</label>
+      <input type="number" id="dQty" value="1" min="1" style="width:60px;padding:6px;border:1.5px solid #ddd;border-radius:6px;text-align:center">
+      <button class="btn btn-primary" onclick="buyNow()">立即購買</button>
+      <button class="btn btn-outline" onclick="addToCart()">加入購物車</button>
     </div>
   </div>
 </div>
 
+<!-- Cart Modal -->
+<div class="modal-overlay" id="cartModal">
+  <div class="modal">
+    <span class="close" onclick="closeModal('cartModal')">&times;</span>
+    <h2><i class="fas fa-shopping-cart"></i> 購物車</h2>
+    <div id="cartList"></div>
+    <div style="margin-top:16px;text-align:right">
+      <strong>合計: $<span id="cartTotal">0</span></strong>
+      <button class="btn btn-primary" style="margin-left:10px" onclick="checkout()">結算</button>
+    </div>
+  </div>
+</div>
+
+<div class="cart-float" onclick="openCart()">
+  <i class="fas fa-shopping-cart"></i>
+  <div class="badge" id="cartBadge" style="display:none">0</div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
-// ============ Config ============
-const API = 'https://arkmall-simple-production.up.railway.app/api';
-
-// ============ State ============
-let allProducts = [];
-let allMerchants = [];
+const API = 'https://5569aacd.strike-agent.com/api';
+let products = [], merchants = [], prices = { bnb: 580, ark: 7.80, usdCny: 6.80 };
 let cart = JSON.parse(localStorage.getItem('ark_cart') || '[]');
-let prices = { bnb: 580, ark: 7.80, usdCny: 6.80 };
+let currentProduct = null;
 
-// ============ Init ============
-document.addEventListener('DOMContentLoaded', async function() {
-  console.log('=== ARK Mall v2 Init ===');
-  console.log('API:', API);
-  await loadPrices();
-  await loadProducts();
-  await loadMerchants();
-});
-
-// ============ Prices ============
-async function loadPrices() {
-  try {
-    const res = await fetch(API + '/prices');
-    const data = await res.json();
-    prices.bnb = data.bnb || 580;
-    prices.ark = data.ark || 7.80;
-    prices.usdCny = data.usdCny || 6.80;
-    console.log('Prices loaded:', prices);
-  } catch(e) {
-    console.warn('Price load failed, using defaults:', e.message);
-  }
-  document.getElementById('priceBNB').textContent = '$' + prices.bnb.toFixed(2);
-  document.getElementById('priceARK').textContent = '$' + prices.ark.toFixed(2);
-  document.getElementById('priceCNY').textContent = '1 USD = ' + prices.usdCny.toFixed(2) + ' CNY';
-}
-
-// ============ Format Price ============
+// ============ Price Format ============
 function fmt(usd) {
-  usd = parseFloat(usd);
-  if (isNaN(usd) || usd <= 0) return '價格不可用';
-  var cny = (usd * prices.usdCny).toFixed(2);
-  var bnb = (usd / prices.bnb).toFixed(6);
-  var ark = (usd / prices.ark).toFixed(2);
-  return '$' + usd.toFixed(2) + ' / ¥' + cny + ' / ' + bnb + ' BNB / ' + ark + ' ARK';
-}
-
-// ============ Products ============
-async function loadProducts() {
-  try {
-    const res = await fetch(API + '/products');
-    allProducts = await res.json();
-    console.log('Products loaded:', allProducts.length);
-  } catch(e) {
-    console.error('Products load failed:', e.message);
-    allProducts = [];
-  }
-  renderProducts();
-}
-
-function renderProducts() {
-  var grid = document.getElementById('productsGrid');
-  if (!grid) { console.error('productsGrid not found'); return; }
-  if (allProducts.length === 0) {
-    grid.innerHTML = '<p class="empty">暫無商品</p>';
-    return;
-  }
-  grid.innerHTML = allProducts.map(function(p) {
-    return '<div class="product-card" onclick="showDetail(' + p.id + ')">' +
-      '<img src="' + (p.image_url || 'https://picsum.photos/400/300?random=' + p.id) + '" alt="' + p.name + '">' +
-      '<div class="info">' +
-        '<div class="name">' + p.name + '</div>' +
-        '<div class="price">' + fmt(p.price) + '</div>' +
-        '<div class="merchant">' + (p.merchant_name || '') + '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-// ============ Detail ============
-function showDetail(id) {
-  var p = allProducts.find(function(x) { return x.id === id; });
-  if (!p) return;
-  var html = '<div class="detail">' +
-    '<img src="' + (p.image_url || 'https://picsum.photos/400/300?random=' + p.id) + '">' +
-    '<h2>' + p.name + '</h2>' +
-    '<div class="price">' + fmt(p.price) + '</div>' +
-    '<div class="desc">' + (p.description || '暫無描述') + '</div>' +
-    '<div class="meta"><span>庫存: ' + (p.stock || 0) + '</span><span>分類: ' + (p.category || '未分類') + '</span></div>' +
-    '<button class="btn btn-primary" onclick="addToCart(' + p.id + ')">加入購物車</button>' +
-    '<div class="merchant-info">' +
-      '<h4>商家信息</h4>' +
-      '<p>' + (p.merchant_name || '未知商家') + '</p>' +
-      '<p>TP 錢包地址:</p>' +
-      '<div class="tp">' + (p.merchant_tp_address || '未設置') + '</div>' +
-      (p.merchant_qrcode ? '<img src="' + p.merchant_qrcode + '">' : '') +
-    '</div>' +
-  '</div>';
-  document.getElementById('detailContent').innerHTML = html;
-  showPage('detail');
-}
-
-// ============ Merchants ============
-async function loadMerchants() {
-  try {
-    const res = await fetch(API + '/merchants');
-    allMerchants = await res.json();
-    console.log('Merchants loaded:', allMerchants.length);
-  } catch(e) {
-    allMerchants = [];
-  }
-  renderMerchants();
-}
-
-function renderMerchants() {
-  var el = document.getElementById('merchantsList');
-  if (allMerchants.length === 0) {
-    el.innerHTML = '<p class="empty">暫無商家</p>';
-    return;
-  }
-  el.innerHTML = allMerchants.map(function(m) {
-    return '<div class="merchant-card">' +
-      '<h3>' + m.name + '</h3>' +
-      '<p>' + (m.description || '暫無介紹') + '</p>' +
-      '<p>TP 錢包地址:</p>' +
-      '<div class="tp">' + m.tp_address + '</div>' +
-      (m.qrcode_url ? '<img src="' + m.qrcode_url + '">' : '') +
-    '</div>';
-  }).join('');
-}
-
-// ============ Cart ============
-function addToCart(productId) {
-  var p = allProducts.find(function(x) { return x.id === productId; });
-  if (!p) return;
-  var existing = cart.find(function(x) { return x.id === productId; });
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    cart.push({ id: p.id, name: p.name, price: p.price, image_url: p.image_url, qty: 1, merchant_name: p.merchant_name, merchant_tp_address: p.merchant_tp_address });
-  }
-  localStorage.setItem('ark_cart', JSON.stringify(cart));
-  showToast('已加入購物車');
-}
-
-function renderCart() {
-  var el = document.getElementById('cartContent');
-  if (cart.length === 0) {
-    el.innerHTML = '<p class="empty">購物車是空的</p>';
-    return;
-  }
-  var total = cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
-  el.innerHTML = cart.map(function(item, i) {
-    return '<div class="cart-item">' +
-      '<img src="' + (item.image_url || 'https://picsum.photos/400/300?random=' + item.id) + '">' +
-      '<div class="info">' +
-        '<div class="name">' + item.name + '</div>' +
-        '<div class="price">' + fmt(item.price) + '</div>' +
-        '<div class="qty">' +
-          '<button onclick="changeQty(' + i + ',-1)">-</button>' +
-          '<span>' + item.qty + '</span>' +
-          '<button onclick="changeQty(' + i + ',1)">+</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('') +
-    '<div style="background:#fff;border-radius:12px;padding:15px;margin-bottom:15px">' +
-      '<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:bold">' +
-        '<span>總計</span><span style="color:#e74c3c">' + fmt(total) + '</span>' +
-      '</div>' +
-    '</div>' +
-    '<button class="btn btn-primary" onclick="checkout()">結算</button>';
-}
-
-function changeQty(index, delta) {
-  cart[index].qty += delta;
-  if (cart[index].qty <= 0) cart.splice(index, 1);
-  localStorage.setItem('ark_cart', JSON.stringify(cart));
-  renderCart();
-}
-
-async function checkout() {
-  if (cart.length === 0) { showToast('購物車是空的'); return; }
-  for (var i = 0; i < cart.length; i++) {
-    try {
-      await fetch(API + '/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: cart[i].id, quantity: cart[i].qty })
-      });
-    } catch(e) {}
-  }
-  cart = [];
-  localStorage.setItem('ark_cart', JSON.stringify(cart));
-  document.getElementById('cartContent').innerHTML = '<div class="success"><h2>下單成功！</h2><p>請聯繫商家完成付款</p></div>';
-  showToast('下單成功');
-}
-
-// ============ Join ============
-async function submitJoin() {
-  var name = document.getElementById('joinName').value.trim();
-  var desc = document.getElementById('joinDesc').value.trim();
-  var tp = document.getElementById('joinTP').value.trim();
-  var qrFile = document.getElementById('joinQR').files[0];
-
-  if (!name) { showToast('請輸入商家名稱'); return; }
-  if (!tp) { showToast('請輸入 TP 錢包地址'); return; }
-  if (!tp.startsWith('0x')) { showToast('TP 錢包地址格式錯誤'); return; }
-
-  var qrUrl = '';
-  if (qrFile) {
-    var formData = new FormData();
-    formData.append('file', qrFile);
-    try {
-      var uploadRes = await fetch(API + '/upload', { method: 'POST', body: formData });
-      var uploadData = await uploadRes.json();
-      if (uploadData.success) qrUrl = uploadData.url;
-    } catch(e) {}
-  }
-
-  try {
-    var res = await fetch(API + '/merchants', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, description: desc, tp_address: tp, qrcode_url: qrUrl })
-    });
-    var data = await res.json();
-    if (data.success) {
-      document.getElementById('joinName').value = '';
-      document.getElementById('joinDesc').value = '';
-      document.getElementById('joinTP').value = '';
-      document.getElementById('joinQR').value = '';
-      showToast('入駐申請已提交，等待審核');
-      showPage('home');
-    } else {
-      showToast('提交失敗: ' + (data.error || ''));
-    }
-  } catch(e) {
-    showToast('網絡錯誤');
-  }
-}
-
-// ============ Navigation ============
-function showPage(page) {
-  var pages = document.querySelectorAll('.page');
-  for (var i = 0; i < pages.length; i++) pages[i].classList.remove('active');
-  var el = document.getElementById('page-' + page);
-  if (el) el.classList.add('active');
-
-  var btns = document.querySelectorAll('.nav button');
-  for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
-  var labels = ['home', 'merchants', 'cart', 'join'];
-  var idx = labels.indexOf(page);
-  if (idx >= 0 && idx < btns.length) btns[idx].classList.add('active');
-
-  if (page === 'cart') renderCart();
+  const cny = usd * prices.usdCny;
+  const bnb = prices.bnb > 0 ? usd / prices.bnb : 0;
+  const ark = prices.ark > 0 ? usd / prices.ark : 0;
+  return '$' + usd.toFixed(2) + ' / ¥' + cny.toFixed(2) + ' / ' + bnb.toFixed(4) + ' BNB / ' + ark.toFixed(2) + ' ARK';
 }
 
 // ============ Toast ============
-function showToast(msg) {
-  var t = document.getElementById('toast');
+function toast(msg) {
+  const t = document.getElementById('toast');
   t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 2500);
+  t.className = 'toast show';
+  setTimeout(() => t.className = 'toast', 2000);
 }
+
+// ============ Load Data ============
+async function loadPrices() {
+  try {
+    const r = await fetch(API + '/prices');
+    const d = await r.json();
+    if (d.bnb) prices.bnb = d.bnb;
+    if (d.ark) prices.ark = d.ark;
+    if (d.usdCny) prices.usdCny = d.usdCny;
+  } catch(e) {}
+  document.getElementById('pBnb').textContent = '$' + prices.bnb.toFixed(2);
+  document.getElementById('pArk').textContent = '$' + prices.ark.toFixed(2);
+  document.getElementById('pCny').textContent = prices.usdCny.toFixed(2);
+}
+
+async function loadProducts() {
+  try {
+    const r = await fetch(API + '/products');
+    products = await r.json();
+    renderProducts();
+  } catch(e) { console.error(e); }
+}
+
+function renderProducts() {
+  const grid = document.getElementById('productsGrid');
+  grid.innerHTML = products.map(p => `
+    <div class="card" onclick="showDetail(${p.id})">
+      <img src="${p.image_url || 'https://picsum.photos/400/300'}" alt="${p.name}">
+      <div class="card-body">
+        <h3>${p.name}</h3>
+        <div class="desc">${p.description}</div>
+        <div class="merchant"><i class="fas fa-store"></i> ${p.merchant_name}</div>
+        <div class="prices"><span class="tag usd">${fmt(p.price)}</span></div>
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();showDetail(${p.id})">查看詳情</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showDetail(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  currentProduct = p;
+  document.getElementById('dName').textContent = p.name;
+  document.getElementById('dImg').src = p.image_url || '';
+  document.getElementById('dDesc').textContent = p.description;
+  document.getElementById('dPrices').innerHTML = '<span class="tag usd" style="font-size:15px">' + fmt(p.price) + '</span>';
+
+  let merchantHtml = '<h4><i class="fas fa-store"></i> ' + (p.merchant_name || '未知商家') + '</h4>';
+  merchantHtml += '<div class="addr">' + (p.merchant_tp_address || '未提供') + '</div>';
+  if (p.merchant_qrcode) merchantHtml += '<img class="qr-img" src="' + p.merchant_qrcode + '">';
+  document.getElementById('dMerchant').innerHTML = merchantHtml;
+
+  document.getElementById('detailModal').classList.add('active');
+}
+
+// ============ Cart ============
+function addToCart() {
+  if (!currentProduct) return;
+  const qty = parseInt(document.getElementById('dQty').value) || 1;
+  const existing = cart.find(c => c.id === currentProduct.id);
+  if (existing) existing.qty += qty;
+  else cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, qty });
+  localStorage.setItem('ark_cart', JSON.stringify(cart));
+  updateBadge();
+  toast('已加入購物車');
+  closeModal('detailModal');
+}
+
+function buyNow() {
+  addToCart();
+  openCart();
+}
+
+function openCart() {
+  renderCart();
+  document.getElementById('cartModal').classList.add('active');
+}
+
+function renderCart() {
+  const list = document.getElementById('cartList');
+  if (!cart.length) { list.innerHTML = '<p style="text-align:center;color:#999;padding:20px">購物車空空如也</p>'; document.getElementById('cartTotal').textContent = '0'; return; }
+  let total = 0;
+  list.innerHTML = cart.map((c, i) => {
+    const sub = c.price * c.qty;
+    total += sub;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee">' +
+      '<div><strong>' + c.name + '</strong><br><span style="font-size:13px;color:#888">$' + c.price.toFixed(2) + ' × ' + c.qty + '</span></div>' +
+      '<div style="display:flex;align-items:center;gap:8px"><span>$' + sub.toFixed(2) + '</span><button class="btn btn-outline btn-sm" onclick="removeCart(' + i + ')">刪除</button></div></div>';
+  }).join('');
+  document.getElementById('cartTotal').textContent = total.toFixed(2);
+}
+
+function removeCart(i) { cart.splice(i, 1); localStorage.setItem('ark_cart', JSON.stringify(cart)); renderCart(); updateBadge(); }
+
+function updateBadge() {
+  const b = document.getElementById('cartBadge');
+  const n = cart.reduce((s, c) => s + c.qty, 0);
+  b.textContent = n;
+  b.style.display = n > 0 ? 'flex' : 'none';
+}
+
+async function checkout() {
+  if (!cart.length) return toast('購物車空');
+  for (const c of cart) {
+    await fetch(API + '/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: c.id, quantity: c.qty, buyer_address: 'wallet_user' }) });
+  }
+  cart = [];
+  localStorage.removeItem('ark_cart');
+  updateBadge();
+  renderCart();
+  toast('訂單已提交！');
+}
+
+// ============ Merchant Registration ============
+async function registerMerchant() {
+  const name = document.getElementById('regName').value.trim();
+  const addr = document.getElementById('regAddr').value.trim();
+  const desc = document.getElementById('regDesc').value.trim();
+  const file = document.getElementById('regQrFile').files[0];
+
+  if (!name || !addr) return toast('請填寫商家名稱和 TP 地址');
+
+  let qrcode_url = '';
+  if (file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const ur = await fetch(API + '/upload', { method: 'POST', body: fd });
+      const ud = await ur.json();
+      if (ud.url) qrcode_url = window.location.origin + ud.url;
+    } catch(e) {}
+  }
+
+  try {
+    const r = await fetch(API + '/merchants', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: desc, tp_address: addr, qrcode_url }) });
+    const d = await r.json();
+    if (d.id) {
+      toast('入駐申請已提交！審核通過後自動上架');
+      document.getElementById('regName').value = '';
+      document.getElementById('regAddr').value = '';
+      document.getElementById('regDesc').value = '';
+      document.getElementById('regQrFile').value = '';
+    } else {
+      toast('提交失敗：' + (d.error || ''));
+    }
+  } catch(e) { toast('網絡錯誤'); }
+}
+
+// ============ Modal ============
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+// ============ Init ============
+(async function() {
+  await loadPrices();
+  await loadProducts();
+  updateBadge();
+})();
 </script>
 </body>
 </html>
