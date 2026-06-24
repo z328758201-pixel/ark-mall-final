@@ -168,15 +168,29 @@ const upload = multer({
 
 // 商家 API
 app.post('/api/merchants/register', (req, res) => {
-    const { address, name, description, logo } = req.body;
+    const { address, name, description, tp_address, qrcode_url } = req.body;
     
     try {
-        const stmt = db.prepare('INSERT INTO merchants (address, name, description, logo) VALUES (?, ?, ?, ?)');
-        stmt.run(address, name, description, logo);
+        const stmt = db.prepare('INSERT INTO merchants (address, name, description, tp_address, qrcode_url) VALUES (?, ?, ?, ?, ?)');
+        stmt.run(address, name, description, tp_address, qrcode_url);
         
         res.json({ success: true, message: '商家註冊成功，等待審核' });
     } catch (error) {
         res.json({ success: false, message: error.message });
+    }
+});
+
+// 商家入駐（直接提交）
+app.post('/api/merchants', (req, res) => {
+    const { address, name, description, tp_address, qrcode_url } = req.body;
+    
+    try {
+        const stmt = db.prepare('INSERT INTO merchants (address, name, description, tp_address, qrcode_url, status) VALUES (?, ?, ?, ?, ?, ?)');
+        stmt.run(address, name, description, tp_address, qrcode_url, 'pending');
+        
+        res.json({ success: true, message: '商家入駐成功，等待審核' });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
     }
 });
 
