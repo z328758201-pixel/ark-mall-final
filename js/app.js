@@ -3,7 +3,7 @@
 
 // ============ 全局變量 ============
 // 後端 API 地址（Railway）
-const API_BASE = 'https://arkmall-simple-production.up.railway.app/api';
+const API_BASE = 'http://localhost:10001/api';
 // 本地測試：const API_BASE = 'http://localhost:10001/api';
 let provider;
 let signer;
@@ -48,36 +48,60 @@ const TOKEN_CONTRACTS = {
     USDT: '0x55d398326f99059fF775485246999027B3197955'
 };
 
-// Dexscreener API (ARK/USDT) - 僅供後端參考
+// Dexscreener API (ARK/USDT) - 支持 CORS，可直接調用
 const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/pairs/bsc/0xCAaF3c41a40103a23Eeaa4BbA468AF3cF5b0e0D8';
 
-// exchangerate API (USD/CNY) - 僅供後端參考
+// Binance API (BNB/USDT) - 支持 CORS，可直接調用
+const BINANCE_API = 'https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT';
+
+// exchangerate API (USD/CNY) - 直接調用
 const EXCHANGERATE_API = 'https://api.exchangerate-api.com/v4/latest/USD';
 
 async function loadExchangeRates() {
     try {
-        console.log('從後端 API 獲取匯率...');
+        console.log('開始載入匯率（直接從外部 API）...');
         
-        // 直接從後端 API 獲取匯率（後端已處理 CORS）
-        const response = await fetch(API_BASE + '/rates');
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-            exchangeRates.bnb = result.data.bnb || 580.52;
-            exchangeRates.ark = result.data.ark || 7.80;
-            exchangeRates.usdt = result.data.usdt || 1;
-            exchangeRates.usdCny = result.data.usdCny || 6.80;
-            
-            console.log('=== 匯率已更新（來自後端 API）===');
-            console.log('BNB/USDT:', exchangeRates.bnb);
-            console.log('ARK/USDT:', exchangeRates.ark);
-            console.log('USD/CNY:', exchangeRates.usdCny);
-        } else {
-            console.error('後端 API 返回失敗，使用默認值');
-            exchangeRates.bnb = 580.52;
-            exchangeRates.ark = 7.80;
-            exchangeRates.usdCny = 6.80;
+        // 1. 從 Binance 獲取 BNB/USDT 價格
+        try {
+            const bnbResponse = await fetch(BINANCE_API);
+            const bnbData = await bnbResponse.json();
+            exchangeRates.bnb = parseFloat(bnbData.price);
+            console.log('BNB 價格:', exchangeRates.bnb);
+        } catch (e) {
+            console.error('獲取 BNB 價格失敗:', e);
+            exchangeRates.bnb = 580.52; // 默認值
         }
+        
+        // 2. 從 Dexscreener 獲取 ARK/USDT 價格
+        try {
+            const arkResponse = await fetch(DEXSCREENER_API);
+            const arkData = await arkResponse.json();
+            if (arkData.pairs && arkData.pairs.length > 0) {
+                exchangeRates.ark = parseFloat(arkData.pairs[0].priceUsd);
+                console.log('ARK 價格:', exchangeRates.ark);
+            }
+        } catch (e) {
+            console.error('獲取 ARK 價格失敗:', e);
+            exchangeRates.ark = 7.80; // 默認值
+        }
+        
+        // 3. 從 exchangerate-api 獲取 USD/CNY 匯率
+        try {
+            const cnyResponse = await fetch(EXCHANGERATE_API);
+            const cnyData = await cnyResponse.json();
+            if (cnyData.rates && cnyData.rates.CNY) {
+                exchangeRates.usdCny = parseFloat(cnyData.rates.CNY);
+                console.log('USD/CNY 匯率:', exchangeRates.usdCny);
+            }
+        } catch (e) {
+            console.error('獲取 USD/CNY 匯率失敗:', e);
+            exchangeRates.usdCny = 6.80; // 默認值
+        }
+        
+        console.log('=== 匯率已更新 ===');
+        console.log('BNB/USDT:', exchangeRates.bnb);
+        console.log('ARK/USDT:', exchangeRates.ark);
+        console.log('USD/CNY:', exchangeRates.usdCny);
         
         // 重新渲染商品以顯示最新價格
         if (products.length > 0) {
