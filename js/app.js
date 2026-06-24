@@ -1,47 +1,15 @@
 // ARK Mall - 前端商城 JavaScript
-// 支持商品展示、購物車、訂單、商家入駐
+// 支持商品展示、購物車、訂單、商家入駐（含 TP 錢包地址 + 二維碼）
 
 // ============ 全局變量 ============
-// 後端 API 地址（Railway）
-const API_BASE = 'http://localhost:10001/api';
-// 本地測試：const API_BASE = 'http://localhost:10001/api';
-let provider;
-let signer;
-let currentAccount = null;
+// 後端 API 地址 - 使用 Railway 生產環境
+const API_BASE = 'https://arkmall-simple-production.up.railway.app/api';
 
-// 購物車
-let cart = [];
+// 外部 API（支持 CORS）
+const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/pairs/bsc/0xCAaF3c41a40103a23Eeaa4BbA468AF3cF5b0e0D8';
+const BINANCE_API = 'https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT';
+const EXCHANGERATE_API = 'https://api.exchangerate-api.com/v4/latest/USD';
 
-// 匯率
-let exchangeRates = {
-    ark: 0,
-    bnb: 0,
-    usdt: 1,
-    usdCny: 7.20
-};
-
-// 商品分類
-let categories = [];
-
-// 商品列表
-let products = [];
-
-// 商家列表
-let merchants = [];
-
-// 當前頁面
-let currentPage = 'home';
-
-// ============ 初始化 ============
-document.addEventListener('DOMContentLoaded', async () => {
-    // 先載入匯率，再載入商品，確保價格顯示正確
-    await loadExchangeRates();
-    loadProducts();
-    loadMerchants();
-    loadCart();
-});
-
-// ============ 匯率功能 ============
 // 代幣合約地址
 const TOKEN_CONTRACTS = {
     BNB: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
@@ -49,54 +17,82 @@ const TOKEN_CONTRACTS = {
     USDT: '0x55d398326f99059fF775485246999027B3197955'
 };
 
-// Dexscreener API (ARK/USDT) - 支持 CORS，可直接調用
-const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/pairs/bsc/0xCAaF3c41a40103a23Eeaa4BbA468AF3cF5b0e0D8';
+// 匯率（初始使用合理默認值）
+let exchangeRates = {
+    ark: 7.80,
+    bnb: 580.00,
+    usdt: 1,
+    usdCny: 6.80
+};
 
-// Binance API (BNB/USDT) - 支持 CORS，可直接調用
-const BINANCE_API = 'https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT';
+let provider;
+let signer;
+let currentAccount = null;
 
-// exchangerate API (USD/CNY) - 直接調用
-const EXCHANGERATE_API = 'https://api.exchangerate-api.com/v4/latest/USD';
+// 購物車
+let cart = [];
 
+// 當前頁面
+let currentPage = 'home';
+
+// 商品和商家
+let products = [];
+let merchants = [];
+
+// 當前查看的商品
+let currentProduct = null;
+
+// ============ 初始化 ============
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('=== ARK Mall 初始化 ===');
+    console.log('API_BASE:', API_BASE);
+    
+    // 先載入匯率，再載入商品
+    await loadExchangeRates();
+    loadProducts();
+    loadMerchants();
+    loadCart();
+});
+
+// ============ 匯率功能 ============
 async function loadExchangeRates() {
     try {
-        console.log('開始載入匯率（直接從外部 API）...');
+        console.log('開始載入匯率...');
         
         // 1. 從 Binance 獲取 BNB/USDT 價格
         try {
             const bnbResponse = await fetch(BINANCE_API);
             const bnbData = await bnbResponse.json();
-            exchangeRates.bnb = parseFloat(bnbData.price);
-            console.log('BNB 價格:', exchangeRates.bnb);
+            if (bnbData && bnbData.price) {
+                exchangeRates.bnb = parseFloat(bnbData.price);
+                console.log('✅ BNB 價格:', exchangeRates.bnb);
+            }
         } catch (e) {
-            console.error('獲取 BNB 價格失敗:', e);
-            exchangeRates.bnb = 580.52; // 默認值
+            console.warn('⚠️ 獲取 BNB 價格失敗，使用默認值:', e.message);
         }
         
         // 2. 從 Dexscreener 獲取 ARK/USDT 價格
         try {
             const arkResponse = await fetch(DEXSCREENER_API);
             const arkData = await arkResponse.json();
-            if (arkData.pairs && arkData.pairs.length > 0) {
+            if (arkData && arkData.pairs && arkData.pairs.length > 0) {
                 exchangeRates.ark = parseFloat(arkData.pairs[0].priceUsd);
-                console.log('ARK 價格:', exchangeRates.ark);
+                console.log('✅ ARK 價格:', exchangeRates.ark);
             }
         } catch (e) {
-            console.error('獲取 ARK 價格失敗:', e);
-            exchangeRates.ark = 7.80; // 默認值
+            console.warn('⚠️ 獲取 ARK 價格失敗，使用默認值:', e.message);
         }
         
         // 3. 從 exchangerate-api 獲取 USD/CNY 匯率
         try {
             const cnyResponse = await fetch(EXCHANGERATE_API);
             const cnyData = await cnyResponse.json();
-            if (cnyData.rates && cnyData.rates.CNY) {
+            if (cnyData && cnyData.rates && cnyData.rates.CNY) {
                 exchangeRates.usdCny = parseFloat(cnyData.rates.CNY);
-                console.log('USD/CNY 匯率:', exchangeRates.usdCny);
+                console.log('✅ USD/CNY 匯率:', exchangeRates.usdCny);
             }
         } catch (e) {
-            console.error('獲取 USD/CNY 匯率失敗:', e);
-            exchangeRates.usdCny = 6.80; // 默認值
+            console.warn('⚠️ 獲取 USD/CNY 匯率失敗，使用默認值:', e.message);
         }
         
         console.log('=== 匯率已更新 ===');
@@ -110,20 +106,15 @@ async function loadExchangeRates() {
         }
     } catch (error) {
         console.error('獲取匯率失敗:', error);
-        // 使用默認值
-        exchangeRates.bnb = 580.52;
-        exchangeRates.ark = 7.80;
-        exchangeRates.usdCny = 6.80;
-        
-        // 重新渲染商品
-        if (products.length > 0) {
-            renderProducts(products);
-        }
+        // 保持使用默認值
     }
 }
 
-// 格式化多種代幣價格（接受 USD 價格）
+// 格式化多種代幣價格
 function formatAllPrices(usdPrice) {
+    usdPrice = parseFloat(usdPrice);
+    if (isNaN(usdPrice) || usdPrice <= 0) return '價格不可用';
+    
     const prices = [];
     
     // 1. USD 價格
@@ -154,10 +145,8 @@ function formatAllPrices(usdPrice) {
 async function apiRequest(endpoint, method = 'GET', data = null) {
     try {
         const options = {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            method,
+            headers: { 'Content-Type': 'application/json' }
         };
         
         if (data) {
@@ -166,49 +155,52 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
         
         const response = await fetch(`${API_BASE}${endpoint}`, options);
         const result = await response.json();
-        
         return result;
     } catch (error) {
-        console.error('API 請求失敗:', error);
-        return { success: false, message: error.message };
+        console.error(`API 請求失敗 (${endpoint}):`, error);
+        throw error;
     }
 }
 
 // ============ 錢包連接 ============
 async function connectWallet() {
     if (typeof window.ethereum === 'undefined') {
-        alert('請安裝 MetaMask 或 Trust Wallet！');
+        alert('請安裝 MetaMask 或其他 Web3 錢包！');
         return;
     }
     
     try {
         provider = new ethers.BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
         signer = await provider.getSigner();
-        
         currentAccount = await signer.getAddress();
         
-        document.getElementById('walletText').textContent = currentAccount.slice(0, 6) + '...' + currentAccount.slice(-4);
+        document.getElementById('connectWallet').textContent = 
+            currentAccount.slice(0, 6) + '...' + currentAccount.slice(-4);
         
-        console.log('錢包連接成功:', currentAccount);
-        
-        // 加載用戶地址
-        loadUserAddresses();
-        
+        console.log('錢包已連接:', currentAccount);
     } catch (error) {
-        console.error('連接失敗:', error);
+        console.error('連接錢包失敗:', error);
+        alert('連接錢包失敗！');
     }
 }
 
-// ============ 加載商品 ============
+// ============ 商品功能 ============
 async function loadProducts() {
     try {
+        console.log('開始載入商品...');
         const result = await apiRequest('/products');
+        
         // 後端返回數組（沒有 success 字段）
         if (Array.isArray(result)) {
             products = result;
-            renderProducts(products);
+            console.log('✅ 商品已載入:', products.length, '個');
+        } else if (result.success && result.data) {
+            products = result.data;
+            console.log('✅ 商品已載入:', products.length, '個');
         }
+        
+        renderProducts(products);
     } catch (error) {
         console.error('加載商品失敗:', error);
     }
@@ -217,7 +209,15 @@ async function loadProducts() {
 // 渲染商品列表
 function renderProducts(productsToRender) {
     const container = document.getElementById('productGrid');
-    if (!container) return;
+    if (!container) {
+        console.error('productGrid 不存在');
+        return;
+    }
+    
+    if (productsToRender.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">暫無商品</p>';
+        return;
+    }
     
     container.innerHTML = productsToRender.map(product => `
         <div class="product-card" onclick="showProductDetail(${product.id})">
@@ -225,73 +225,44 @@ function renderProducts(productsToRender) {
             <div class="product-info">
                 <h3>${product.name}</h3>
                 <p class="product-price">${formatAllPrices(product.price)}</p>
-                <p class="product-category">${product.category}</p>
-                <p class="product-stock">庫存：${product.stock}</p>
+                <p class="product-category">${product.category || '未分類'}</p>
+                <p class="product-stock">庫存：${product.stock || 0}</p>
             </div>
         </div>
     `).join('');
 }
 
-// ============ 加載商家 ============
-async function loadMerchants() {
-    try {
-        const result = await apiRequest('/merchants');
-        // 後端返回 { success: true, data: [...] }
-        if (result.success && Array.isArray(result.data)) {
-            merchants = result.data;
-            renderMerchants(merchants);
-        }
-    } catch (error) {
-        console.error('加載商家失敗:', error);
-    }
-}
-
-// 渲染商家列表
-function renderMerchants(merchantsToRender) {
-    const container = document.getElementById('merchantGrid');
-    if (!container) return;
+// 顯示商品詳情
+function showProductDetail(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
     
-    if (merchantsToRender.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">暫無入駐商家</p>';
-        return;
-    }
+    currentProduct = product;
     
-    container.innerHTML = merchantsToRender.map(merchant => `
-        <div class="merchant-card" onclick="showMerchantDetail(${merchant.id})">
-            <img src="https://picsum.photos/100/100?random=${merchant.id}" alt="${merchant.name}">
-            <div class="merchant-info">
-                <h3>${merchant.name}</h3>
-                <p>${merchant.description || ''}</p>
-            </div>
-        </div>
-    `).join('');
+    document.getElementById('detailName').textContent = product.name;
+    document.getElementById('detailDescription').textContent = product.description || '';
+    document.getElementById('detailPrice').innerHTML = formatAllPrices(product.price);
+    document.getElementById('detailStock').textContent = '庫存：' + (product.stock || 0);
+    document.getElementById('detailImage').src = product.image_url || 'https://picsum.photos/400/300?random=' + product.id;
+    
+    showPage('product');
 }
 
-// ============ 購物車功能 ============
-function loadCart() {
-    const savedCart = localStorage.getItem('arkmall_cart');
-    if (savedCart) {
-        cart = JSON.parse(savedCart);
-        updateCartBadge();
-    }
-}
-
-function saveCart() {
-    localStorage.setItem('arkmall_cart', JSON.stringify(cart));
-    updateCartBadge();
-}
-
-function addToCart(productId) {
+// 添加到購物車
+function addToCart(productId, quantity = 1) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
-        existingItem.quantity++;
+        existingItem.quantity += quantity;
     } else {
         cart.push({
-            ...product,
-            quantity: 1
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image_url: product.image_url,
+            quantity: quantity
         });
     }
     
@@ -299,53 +270,58 @@ function addToCart(productId) {
     alert('已加入購物車！');
 }
 
-function updateCartBadge() {
-    const badge = document.getElementById('cartBadge');
-    if (badge) {
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        badge.textContent = totalItems;
+function addCurrentToCart() {
+    if (currentProduct) {
+        addToCart(currentProduct.id, 1);
     }
 }
 
-function showCart() {
-    showPage('cart');
+// ============ 購物車功能 ============
+function loadCart() {
+    const savedCart = localStorage.getItem('arkmall_cart');
+    if (savedCart) {
+        cart = JSON.parse(savedCart);
+        renderCart();
+    }
+}
+
+function saveCart() {
+    localStorage.setItem('arkmall_cart', JSON.stringify(cart));
     renderCart();
 }
 
 function renderCart() {
-    const container = document.getElementById('cartContent');
+    const container = document.getElementById('cartItems');
     if (!container) return;
     
     if (cart.length === 0) {
-        container.innerHTML = '<p class="empty-cart">購物車是空的</p>';
+        container.innerHTML = '<p style="text-align: center; color: #666;">購物車是空的</p>';
+        document.getElementById('cartTotal').textContent = '總計：$0.00';
         return;
     }
     
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    container.innerHTML = `
-        <div class="cart-items">
-            ${cart.map(item => `
-                <div class="cart-item">
-                    <img src="${item.image_url || 'https://picsum.photos/100/100?random=' + item.id}" alt="${item.name}">
-                    <div class="cart-item-info">
-                        <h3>${item.name}</h3>
-                        <p>${item.price} BNB</p>
-                        <div class="quantity-control">
-                            <button onclick="updateQuantity(${item.id}, -1)">-</button>
-                            <span>${item.quantity}</span>
-                            <button onclick="updateQuantity(${item.id}, 1)">+</button>
-                        </div>
+    let total = 0;
+    container.innerHTML = cart.map(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        return `
+            <div class="cart-item">
+                <img src="${item.image_url || 'https://picsum.photos/100/100?random=' + item.id}" alt="${item.name}">
+                <div class="cart-item-info">
+                    <h4>${item.name}</h4>
+                    <p>${formatAllPrices(item.price)}</p>
+                    <div class="cart-item-actions">
+                        <button onclick="updateQuantity(${item.id}, -1)">-</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="updateQuantity(${item.id}, 1)">+</button>
+                        <button onclick="removeFromCart(${item.id})">刪除</button>
                     </div>
-                    <button class="remove-btn" onclick="removeFromCart(${item.id})">刪除</button>
                 </div>
-            `).join('')}
-        </div>
-        <div class="cart-summary">
-            <p>總計：${total.toFixed(4)} BNB</p>
-            <button class="checkout-btn" onclick="checkout()">結算</button>
-        </div>
-    `;
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('cartTotal').innerHTML = `總計：${formatAllPrices(total)}`;
 }
 
 function updateQuantity(productId, change) {
@@ -356,7 +332,6 @@ function updateQuantity(productId, change) {
             removeFromCart(productId);
         } else {
             saveCart();
-            renderCart();
         }
     }
 }
@@ -364,10 +339,12 @@ function updateQuantity(productId, change) {
 function removeFromCart(productId) {
     cart = cart.filter(item => item.id !== productId);
     saveCart();
-    renderCart();
 }
 
-// ============ 訂單功能 ============
+function showCart() {
+    showPage('cart');
+}
+
 async function checkout() {
     if (!currentAccount) {
         alert('請先連接錢包！');
@@ -380,77 +357,63 @@ async function checkout() {
     }
     
     try {
-        // 為每個商品創建訂單
-        for (const item of cart) {
-            await apiRequest('/orders', 'POST', {
-                user_address: currentAccount,
-                product_id: item.id,
-                quantity: item.quantity
-            });
-        }
+        // 計算總金額
+        let totalUSD = 0;
+        cart.forEach(item => {
+            totalUSD += item.price * item.quantity;
+        });
+        
+        // 轉換為 ARK
+        const totalARK = exchangeRates.ark > 0 ? totalUSD / exchangeRates.ark : 0;
+        
+        // 發送 ARK 到商家地址（這裡需要商家的 TP 錢包地址）
+        // 暫時使用默認地址，實際需要從商家獲取
+        const merchantAddress = '0x0000000000000000000000000000000000000000';
+        
+        alert(`訂單金額：${totalARK.toFixed(2)} ARK ($${totalUSD.toFixed(2)} USD)\n\n請手動轉帳到商家錢包地址：${merchantAddress}`);
         
         // 清空購物車
         cart = [];
         saveCart();
-        
-        alert('訂單創建成功！');
-        showPage('orders');
-        loadOrders();
-        
+        showPage('home');
     } catch (error) {
-        console.error('結算失敗:', error);
-        alert('結算失敗：' + error.message);
+        console.error('結帳失敗:', error);
+        alert('結帳失敗！');
     }
 }
 
-async function loadOrders() {
-    if (!currentAccount) return;
-    
+// ============ 商家功能 ============
+async function loadMerchants() {
     try {
-        const result = await apiRequest(`/orders?user_address=${currentAccount}`);
-        // 後端返回數組
-        if (Array.isArray(result)) {
-            renderOrders(result);
+        const result = await apiRequest('/merchants');
+        if (result.success && result.data) {
+            merchants = result.data;
+            renderMerchants(merchants);
         }
     } catch (error) {
-        console.error('加載訂單失敗:', error);
+        console.error('加載商家失敗:', error);
     }
 }
 
-function renderOrders(orders) {
-    const container = document.getElementById('ordersContent');
+function renderMerchants(merchantsToRender) {
+    const container = document.getElementById('merchantGrid');
     if (!container) return;
     
-    if (orders.length === 0) {
-        container.innerHTML = '<p class="empty-orders">暫無訂單</p>';
+    if (merchantsToRender.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">暫無入駐商家</p>';
         return;
     }
     
-    container.innerHTML = orders.map(order => `
-        <div class="order-card">
-            <div class="order-header">
-                <span class="order-no">${order.order_no}</span>
-                <span class="order-status status-${order.status}">${getStatusText(order.status)}</span>
-            </div>
-            <div class="order-body">
-                <p>商品ID：${order.product_id}</p>
-                <p>數量：${order.quantity}</p>
-                <p>總計：${order.total_price} BNB</p>
+    container.innerHTML = merchantsToRender.map(merchant => `
+        <div class="merchant-card" onclick="showMerchantDetail(${merchant.id})">
+            <img src="${merchant.qrcode_url || 'https://picsum.photos/100/100?random=' + merchant.id}" alt="${merchant.name}">
+            <div class="merchant-info">
+                <h3>${merchant.name}</h3>
+                <p>${merchant.description || ''}</p>
+                <p class="merchant-address">💰 ${merchant.tp_address ? merchant.tp_address.slice(0, 10) + '...' : '未設置'}</p>
             </div>
         </div>
     `).join('');
-}
-
-function getStatusText(status) {
-    const statusMap = {
-        'pending': '待支付',
-        'paid': '已支付',
-        'shipped': '已發貨',
-        'received': '已簽收',
-        'completed': '已完成',
-        'cancelled': '已取消'
-    };
-    return statusMap[status] || status;
 }
 
 // ============ 商家入駐功能 ============
@@ -470,23 +433,60 @@ async function submitMerchantRegister() {
     
     const name = document.getElementById('merchantName').value.trim();
     const description = document.getElementById('merchantDescription').value.trim();
+    const tpAddress = document.getElementById('merchantTpAddress').value.trim();
+    const qrcodeFile = document.getElementById('merchantQrcode').files[0];
     
+    // 驗證
     if (!name) {
         alert('請輸入商家名稱！');
         return;
     }
     
+    if (!tpAddress) {
+        alert('請輸入 TP 錢包收款地址！');
+        return;
+    }
+    
+    // 驗證以太坊地址格式
+    if (!/^0x[a-fA-F0-9]{40}$/.test(tpAddress)) {
+        alert('TP 錢包地址格式不正確！請輸入有效的以太坊地址。');
+        return;
+    }
+    
+    // 上傳二維碼（如果有）
+    let qrcodeUrl = '';
+    if (qrcodeFile) {
+        const formData = new FormData();
+        formData.append('image', qrcodeFile);
+        
+        try {
+            const uploadResult = await fetch(`${API_BASE}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadResult.json();
+            if (uploadData.url) {
+                qrcodeUrl = uploadData.url;
+            }
+        } catch (e) {
+            console.error('上傳二維碼失敗:', e);
+        }
+    }
+    
+    // 提交入駐申請
     try {
         const result = await apiRequest('/merchants', 'POST', {
             name: name,
             address: currentAccount,
-            description: description
+            description: description,
+            tp_address: tpAddress,
+            qrcode_url: qrcodeUrl
         });
         
         if (result.error) {
             alert('入駐失敗：' + result.error);
         } else {
-            alert('商家入駐成功！');
+            alert('商家入駐成功！等待審核通過。');
             loadMerchants();
             closeModal('merchantModal');
             showPage('merchants');
@@ -504,58 +504,56 @@ function showMerchantDetail(merchantId) {
     const merchant = merchants.find(m => m.id === merchantId);
     if (merchant) {
         document.getElementById('merchantDetailName').textContent = merchant.name;
-        document.getElementById('merchantDetailDesc').textContent = merchant.description || '暫無描述';
+        document.getElementById('merchantDetailDesc').textContent = merchant.description || '';
         
-        // 加載商家商品
-        const merchantProducts = products.filter(p => p.merchant_id === merchantId);
-        renderMerchantProducts(merchantProducts);
+        // 顯示 TP 錢包地址和二維碼
+        const detailContainer = document.getElementById('merchantDetailInfo');
+        if (detailContainer) {
+            detailContainer.innerHTML = `
+                <div class="merchant-payment-info">
+                    <h3>💰 支付信息</h3>
+                    <p><strong>TP 錢包地址：</strong>${merchant.tp_address || '未設置'}</p>
+                    ${merchant.qrcode_url ? `<img src="${merchant.qrcode_url}" alt="收款二維碼" style="max-width: 200px;">` : ''}
+                </div>
+            `;
+        }
     }
 }
 
-function renderMerchantProducts(productsToRender) {
-    const container = document.getElementById('merchantProducts');
-    if (!container) return;
-    
-    if (productsToRender.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">暫無商品</p>';
+// ============ 訂單功能 ============
+async function loadOrders() {
+    if (!currentAccount) {
+        document.getElementById('orderList').innerHTML = '<p style="text-align: center;">請先連接錢包</p>';
         return;
     }
     
-    container.innerHTML = productsToRender.map(product => `
-        <div class="product-card" onclick="showProductDetail(${product.id})">
-            <img src="${product.image_url || 'https://picsum.photos/400/300?random=' + product.id}" alt="${product.name}">
-            <div class="product-info">
-                <h3>${product.name}</h3>
-                <p class="product-price">${formatAllPrices(product.price)}</p>
-            </div>
-        </div>
-    `).join('');
-}
-
-// ============ 商品詳情 ============
-function showProductDetail(productId) {
-    showPage('productDetail');
-    
-    const product = products.find(p => p.id === productId);
-    if (product) {
-        document.getElementById('detailName').textContent = product.name;
-        document.getElementById('detailPrice').textContent = formatAllPrices(product.price);
-        document.getElementById('detailDesc').textContent = product.description || '暫無描述';
-        document.getElementById('detailStock').textContent = '庫存：' + product.stock;
-        document.getElementById('detailCategory').textContent = product.category || '';
-        
-        const img = document.getElementById('detailImage');
-        img.src = product.image_url || 'https://picsum.photos/400/300?random=' + product.id;
-        
-        // 存儲當前商品 ID
-        document.getElementById('addToCartBtn').setAttribute('data-product-id', product.id);
+    try {
+        const result = await apiRequest(`/orders?user_address=${currentAccount}`);
+        if (result.data) {
+            renderOrders(result.data);
+        }
+    } catch (error) {
+        console.error('加載訂單失敗:', error);
     }
 }
 
-function addCurrentToCart() {
-    const btn = document.getElementById('addToCartBtn');
-    const productId = parseInt(btn.getAttribute('data-product-id'));
-    addToCart(productId);
+function renderOrders(orders) {
+    const container = document.getElementById('orderList');
+    if (!container) return;
+    
+    if (orders.length === 0) {
+        container.innerHTML = '<p style="text-align: center;">暫無訂單</p>';
+        return;
+    }
+    
+    container.innerHTML = orders.map(order => `
+        <div class="order-card">
+            <h4>訂單號：${order.order_no}</h4>
+            <p>金額：${formatAllPrices(order.total_price)}</p>
+            <p>狀態：${order.status}</p>
+            <p>時間：${formatDate(order.created_at)}</p>
+        </div>
+    `).join('');
 }
 
 // ============ 頁面導航 ============
@@ -590,6 +588,9 @@ function showPage(page) {
     
     // 加載頁面數據
     switch (page) {
+        case 'merchants':
+            loadMerchants();
+            break;
         case 'orders':
             loadOrders();
             break;
@@ -603,6 +604,24 @@ function formatPrice(price) {
 
 function formatDate(dateString) {
     return new Date(dateString).toLocaleString('zh-CN');
+}
+
+// ============ 搜索 ============
+async function search() {
+    const keyword = document.getElementById('searchInput').value.trim();
+    if (!keyword) {
+        renderProducts(products);
+        return;
+    }
+    
+    try {
+        const result = await apiRequest(`/search?keyword=${encodeURIComponent(keyword)}`);
+        if (result.products) {
+            renderProducts(result.products);
+        }
+    } catch (error) {
+        console.error('搜索失敗:', error);
+    }
 }
 
 // ============ 全局函數 ============
@@ -620,25 +639,3 @@ window.showMerchantDetail = showMerchantDetail;
 window.showProductDetail = showProductDetail;
 window.addCurrentToCart = addCurrentToCart;
 window.search = search;
-
-// 搜索功能
-async function search() {
-    const keyword = document.getElementById('searchInput').value.trim();
-    if (!keyword) {
-        loadProducts();
-        return;
-    }
-    
-    try {
-        const result = await apiRequest(`/search?keyword=${encodeURIComponent(keyword)}`);
-        if (result.products) {
-            products = result.products;
-            renderProducts(products);
-        }
-    } catch (error) {
-        console.error('搜索失敗:', error);
-    }
-}// Cache bust: Tue Jun 23 15:51:38 UTC 2026
-// Cache bust: Tue Jun 23 16:14:07 UTC 2026
-// Cache bust: Tue Jun 23 16:23:14 UTC 2026
-// Cache bust: Tue Jun 23 16:31:08 UTC 2026

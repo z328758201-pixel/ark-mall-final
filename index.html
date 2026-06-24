@@ -251,15 +251,25 @@
     <div id="merchantModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeModal('merchantModal')">&times;</span>
-            <h2>🏪 商家註冊</h2>
+            <h2>🏪 商家入駐</h2>
             <form id="merchantForm" onsubmit="submitMerchantRegister()">
                 <div class="form-group">
                     <label>商家名稱 *</label>
-                    <input type="text" id="merchantName" required>
+                    <input type="text" id="merchantName" required placeholder="輸入商家名稱">
                 </div>
                 <div class="form-group">
                     <label>商家簡介</label>
                     <textarea id="merchantDescription" placeholder="介紹您的店鋪..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>TP 錢包收款地址 *</label>
+                    <input type="text" id="merchantTpAddress" required placeholder="0x...">
+                    <p class="form-help">輸入您的 TP 錢包 BSC 網絡收款地址</p>
+                </div>
+                <div class="form-group">
+                    <label>收款二維碼</label>
+                    <input type="file" id="merchantQrcode" accept="image/*">
+                    <p class="form-help">上傳您的收款二維碼圖片</p>
                 </div>
                 <div class="form-group">
                     <label>保證金：20 ARK</label>
