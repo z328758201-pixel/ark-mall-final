@@ -33,11 +33,12 @@ let merchants = [];
 let currentPage = 'home';
 
 // ============ 初始化 ============
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 先載入匯率，再載入商品，確保價格顯示正確
+    await loadExchangeRates();
     loadProducts();
     loadMerchants();
     loadCart();
-    loadExchangeRates(); // 載入匯率
 });
 
 // ============ 匯率功能 ============
