@@ -13,6 +13,9 @@ const PORT = 10001;
 // 中間件
 app.use(cors());
 app.use(express.json());
+// 靜態文件服務（前端）
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 確保上傳目錄存在
