@@ -4,6 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const Database = require('better-sqlite3');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
 
 const app = express();
 const PORT = 10001;
@@ -452,15 +454,53 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 });
 
 // 匯率 API
-app.get('/api/rates', (req, res) => {
-    // 這裡可以接入真實的匯率 API
-    const rates = {
-        ark: 0.15,
-        bnb: 300,
-        usdt: 1,
-        usdCny: 7.20
-    };
-    res.json({ success: true, data: rates });
+function fetchJson(url) {
+    return new Promise((resolve, reject) => {
+        const protocol = url.startsWith('https') ? https : http;
+        const req = protocol.get(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        }, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                try { resolve(JSON.parse(data)); } 
+                catch (e) { reject(new Error('JSON parse failed')); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(5000, () => { req.destroy(); reject(new Error('Timeout')); });
+    });
+}
+
+app.get('/api/rates', async (req, res) => {
+    try {
+        const bnbData = await fetchJson('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT');
+        const arkData = await fetchJson('https://api.dexscreener.com/latest/dex/pairs/bsc/0xCAaF3c41a40103a23Eeaa4BbA468AF3cF5b0e0D8');
+        const cnyData = await fetchJson('https://api.exchangerate-api.com/v4/latest/USD');
+
+        let arkPrice = 7.80;
+        if (arkData && arkData.pairs && arkData.pairs.length > 0) {
+            arkPrice = parseFloat(arkData.pairs[0].priceUsd);
+        }
+
+        let usdCny = 6.80;
+        if (cnyData && cnyData.rates && cnyData.rates.CNY) {
+            usdCny = parseFloat(cnyData.rates.CNY);
+        }
+
+        const rates = {
+            bnb: bnbData ? parseFloat(bnbData.price) : 580.52,
+            ark: arkPrice,
+            usdt: 1,
+            usdCny: usdCny
+        };
+
+        console.log('Rates:', rates);
+        res.json({ success: true, data: rates });
+    } catch (error) {
+        console.error('Rates error:', error);
+        res.json({ success: true, data: { bnb: 580.52, ark: 7.80, usdt: 1, usdCny: 6.80 } });
+    }
 });
 
 // 搜索 API
